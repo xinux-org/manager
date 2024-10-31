@@ -1,5 +1,5 @@
 {
-  "name": "nix-backend",
+  "name": "nix-language-parser",
   "version": "0.0.0",
   "scripts": {
     "res:build": "rescript",
@@ -13,10 +13,10 @@
   "license": "MIT",
   "dependencies": {
     "@rescript/core": "^1.6.1",
-    "rescript": "^11.1.4"
+    "rescript": "^11.1.4",
+    "rescript-nodejs": "^16.1.0"
   },
   "devDependencies": {
-    "concurrently": "^9.0.1",
     "nodemon": "^3.1.7"
   }
 }
