@@ -1,16 +1,4 @@
 module InnerHelpers = {
-  let regexTransform = (
-    regexp: RegExp.t,
-    ~input: string,
-    ~index: int=0,
-    ~some: string => 'output,
-    ~none: unit => 'output,
-  ): 'output =>
-    switch regexp->RegExp.exec(input->String.sliceToEnd(~start=index)) {
-    | Some(value) => some(value->RegExp.Result.fullMatch)
-    | None => none()
-    }
-
   @val @module("node:util")
   external inspect: ('a, NodeJs.Util.inspectOptions) => string = "inspect"
 
@@ -28,27 +16,74 @@ module InnerHelpers = {
 
 module State = {
   type rec value = List(array<value>) | String(string)
-  type successValue = {input: string, index: int, result: option<value>}
-  type errorValue = {input: string, index: int, result: option<value>, message: string}
-  type output = {input: string, index: int, result: option<value>, message: string}
+
+  type successValue = {
+    input: string,
+    index: int,
+    result: option<value>,
+  }
+  type errorValue = {
+    input: string,
+    index: int,
+    result: option<value>,
+    message: string,
+  }
+  type output = {
+    input: string,
+    index: int,
+    result: option<value>,
+    message: string,
+  }
 
   type t =
     | Success(successValue)
     | Error(errorValue)
 
-  let map = (state: t, transformFn: successValue => 'anything, otherwise: 'anything) => {
+  let map = (state: t, default: 'output, transformFn: successValue => 'output) =>
     switch state {
     | Success(successValue) => transformFn(successValue)
-    | _ => otherwise
+    | _ => default
     }
-  }
 
-  let mapErr = (state: t, transformFn: errorValue => 'anything, otherwise: 'anything) => {
+  let mapErr = (state: t, default: 'output, transformFn: errorValue => 'output) =>
     switch state {
     | Error(errorValue) => transformFn(errorValue)
-    | _ => otherwise
+    | _ => default
     }
-  }
+
+  let transformToErrStr = (state: t, message: string) =>
+    switch state {
+    | Success({input, index}) => Error({input, index, message, result: None})
+    | Error(errorValue) => Error({...errorValue, message})
+    }
+
+  let mapString = (state: t, default: 'output, transformFn: string => 'output) =>
+    state->map(default, ({result}) =>
+      switch result {
+      | Some(String(string)) => transformFn(string)
+      | _ => default
+      }
+    )
+
+  let mapList = (state: t, default: 'output, transformFn: array<value> => 'output) =>
+    state->map(default, ({result}) =>
+      switch result {
+      | Some(List(results)) => transformFn(results)
+      | _ => default
+      }
+    )
+
+  let input = (state: t) =>
+    switch state {
+    | Success({input}) => input
+    | Error({input}) => input
+    }
+
+  let index = (state: t) =>
+    switch state {
+    | Success({index}) => index
+    | Error({index}) => index
+    }
 
   let log = (state: t) => {
     let output: output = switch state {
@@ -118,77 +153,66 @@ module Parser = {
                 State.String(input->String.slice(~start=index, ~end=index + target->String.length)),
               ),
             })
-          : Error({
-              input,
-              index,
-              message: `Couldn't parse string ${target}`,
-              result: None,
-            })
+          : state->State.transformToErrStr(`Couldn't parse string ${target}`)
       | rest => rest
       }
     )
 
   let sequenceOf = (targets: array<t>) =>
-    new(state => state->State.map(_ => {
-        let (results, state) =
-          targets->Array.reduce(
-            ([], state),
-            ((results, state), {transformFn}) =>
-              transformFn(state)->State.map(
-                successValue => (
-                  [...results, ...successValue.result->Option.mapOr([], v => [v])],
-                  State.Success(successValue),
-                ),
-                (results, state),
-              ),
-          )
+    new(state =>
+      state->State.map(state, _ => {
+        let (results, state) = targets->Array.reduce(
+          ([], state),
+          ((results, state), {transformFn}) =>
+            switch transformFn(state) {
+            | Success(successValue) => (
+                [...results, ...successValue.result->Option.mapOr([], v => [v])],
+                State.Success(successValue),
+              )
+            | Error(errorValue) => (results, State.Error(errorValue))
+            },
+        )
 
         switch state {
         | State.Success(successValue) =>
           State.Success({...successValue, result: Some(List(results))})
         | rest => rest
         }
-      }, state))
+      })
+    )
 
-  let lettersRegExp = %re("/^[a-zA-Z]+/")
-  let letters = new(state => state->State.map(({input, index, result}) =>
-      InnerHelpers.regexTransform(
-        lettersRegExp,
-        ~input,
-        ~index,
-        ~some=value => State.Success({
-          input,
-          index: index + value->String.length,
-          result: Some(String(value)),
-        }),
-        ~none=() => State.Error({
-          input,
-          index,
-          result: None,
-          message: `Can't parse letters from input`,
-        }),
-      )
-    , state))
+  let regexp = (expression: RegExp.t, transformFn: RegExp.Result.t => option<State.value>) =>
+    new(state => {
+      Js.log(state)
+      Js.log(state->State.input)
+      Js.log("---")
+      state->State.mapString(
+        state->State.transformToErrStr("Expected type String as input"),
+        string =>
+          expression
+          ->RegExp.exec(string->String.sliceToEnd(~start=state->State.index))
+          ->Option.mapOr(
+            state->State.transformToErrStr(
+              `Failed to parse regular expression ${expression->RegExp.source}`,
+            ),
+            result => {
+              let result = transformFn(result)
 
-  let digitsRegExp = %re("/^[0-9]+/")
-  let digits = new(state => state->State.map(({input, index, result}) =>
-      InnerHelpers.regexTransform(
-        digitsRegExp,
-        ~input,
-        ~index,
-        ~some=value => State.Success({
-          input,
-          index: index + value->String.length,
-          result: Some(String(value)),
-        }),
-        ~none=() => State.Error({
-          input,
-          index,
-          result: None,
-          message: `Can't parse digits from input`,
-        }),
+              State.Success({
+                input: state->State.input,
+                index: state->State.index +
+                  state->State.mapString(0, string => string->String.length),
+                result,
+              })
+            },
+          ),
       )
-    , state))
+    })
+
+  let letter = regexp(%re("/^[a-zA-Z]/"), result => Some(String(result->RegExp.Result.fullMatch)))
+  let letters = regexp(%re("/^[a-zA-Z]+/"), result => Some(String(result->RegExp.Result.fullMatch)))
+  let digit = regexp(%re("/^[0-9]/"), result => Some(String(result->RegExp.Result.fullMatch)))
+  let digits = regexp(%re("/^[0-9]+/"), result => Some(String(result->RegExp.Result.fullMatch)))
 }
 
 // str = new Parser((parserState) => { ... })

@@ -26,7 +26,6 @@ let parse = (raw: string) => {
     Parser.letters,
     Parser.digits,
     Parser.sequenceOf([
-      Parser.digits,
       Parser.letters,
       Parser.digits,
       Parser.letters,
@@ -34,6 +33,6 @@ let parse = (raw: string) => {
       Parser.letters,
     ]),
   ])
-  ->Parser.run("456validoe455a1b2c3")
+  ->Parser.run("1a2bcd3ef456gh")
   ->State.log
 }
