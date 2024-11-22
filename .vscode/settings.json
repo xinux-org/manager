@@ -1,4 +1,3 @@
 {
-    "editor.tabSize": 2,
-    "editor.defaultFormatter": "chenglou92.rescript-vscode"
+    "editor.tabSize": 2
 }
