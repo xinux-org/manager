@@ -1,7 +1,16 @@
-use poem::{listener::TcpListener, Route, Server};
-use poem_openapi::{param::Query, payload::PlainText, OpenApi, OpenApiService};
+use poem::{listener::TcpListener, Result, Route, Server};
+use poem_openapi::{param::Query, payload::PlainText, ApiResponse, OpenApi, OpenApiService};
 
 struct Api;
+
+#[derive(ApiResponse, Debug)]
+enum FetchResponse {
+    #[oai(status = 200)]
+    Ok(PlainText<String>),
+
+    #[oai(status = 500)]
+    Error(PlainText<String>),
+}
 
 #[OpenApi]
 impl Api {
@@ -11,6 +20,25 @@ impl Api {
             Some(name) => PlainText(format!("hello, {name}!")),
             None => PlainText("hello!".to_string()),
         }
+    }
+
+    #[oai(path = "/fetch", method = "post")]
+    async fn fetch(&self) -> Result<FetchResponse> {
+        let res = flake_info::data::Source::nixpkgs("24.11".to_string())
+            .await
+            .map_err(|err| FetchResponse::Error(PlainText(err.to_string())))?;
+        println!("{:?}", res);
+
+        let i = flake_info::process_nixpkgs(
+            &flake_info::data::Source::Nixpkgs(res),
+            &flake_info::data::import::Kind::All,
+        )
+        .map_err(|err| {
+            println!("{:?}", err);
+            FetchResponse::Error(PlainText("".to_string()))
+        });
+        println!("{:?}", i);
+        Ok(FetchResponse::Ok(PlainText("".to_string())))
     }
 }
 

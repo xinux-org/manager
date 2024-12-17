@@ -15,6 +15,7 @@ pkgs.mkShell {
   buildInputs = (with pkgs; [
     flutter
     android-tools
+    pandoc
   ]);
 
   LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
