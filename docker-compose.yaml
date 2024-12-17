@@ -1,0 +1,34 @@
+name: "xinux-manager-infra"
+
+services:
+  elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    restart: always
+    volumes:
+      - .data/elastic:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+  postgres:
+    image: postgres:17.2
+    restart: always
+    shm_size: 128mb
+    environment:
+      - POSTGRES_DB=db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - .data/postgres:/var/lib/postgresql/data
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+  redis:
+    image: redis:7.4
+    restart: always
+    volumes:
+      - .data/redis:/data
+    ports:
+      - 6379:6379

@@ -9,6 +9,7 @@ pkgs.mkShell {
   nativeBuildInputs = [pkg-config] ++ (with pkgs; [
     openssl
     libgit2
+    sqlite
   ]);
 
   buildInputs = (with pkgs; [
@@ -19,7 +20,13 @@ pkgs.mkShell {
   LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
     pkgs.openssl
     pkgs.libgit2
+    pkgs.sqlite
   ];
   
   RUST_SRC_PATH = "${rust_channel}/lib/rustlib/src/rust/library";
+  LINK_MANPAGES_PANDOC_FILTER = import ./nixos-search/flake-info/src/data/link-manpages.nix { inherit pkgs; };
+
+  shellHook = ''
+    export PATH="$PATH:${rust_channel}/bin"
+  '';
 }
