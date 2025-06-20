@@ -1,0 +1,10 @@
+[machines.laptop]
+hostPlatform = { xmgr = true, type = "host-platform", value = "x86_64-linux" }
+boot.loader.systemd-boot.enable = true
+boot.loader.efi.canTouchEfiVariables = true
+services.xserver.enable = true
+system.stateVersion = "24.11"
+
+[global."x86_64-linux"."xmgr-packages"]
+firefox = { xmgr = true, type = "packages-from-pkgs" }
+pcmd = { xmgr = true, type = "packages-from-flake", src = "github:shakhzodme/pcmd-nix/main", package = "packages.${builtins.currentSystem}.default" }

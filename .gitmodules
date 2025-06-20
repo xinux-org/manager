@@ -1,3 +1,0 @@
-[submodule "nixos-search"]
-	path = nixos-search
-	url = https://github.com/NixOS/nixos-search.git

@@ -5,13 +5,15 @@ edition = "2021"
 
 [dependencies]
 git2 = "0.19.0"
-flake-info = { path = "../nixos-search/flake-info" }
+flake-info = { path = "../flake-info" }
 poem = "3.1.5"
 poem-openapi = { version = "5.1.4", features = ["swagger-ui"] }
 tokio = "1.42.0"
 sqlx = { version = "0.8.2", features = [
+  "sqlite",
   "postgres",
   "runtime-tokio",
   "tls-native-tls",
 ], default-features = false }
 tracing-subscriber = "0.3.19"
+serde_json = "1.0.134"

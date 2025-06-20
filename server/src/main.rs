@@ -1,10 +1,24 @@
+use std::io::Write;
+
+use flake_info::data::{import::Package, Derivation, Export};
 use poem::{listener::TcpListener, Result, Route, Server};
-use poem_openapi::{param::Query, payload::PlainText, ApiResponse, OpenApi, OpenApiService};
+use poem_openapi::{
+    param::Query, payload::PlainText, types::ToJSON, ApiResponse, OpenApi, OpenApiService,
+};
 
 struct Api;
 
 #[derive(ApiResponse, Debug)]
 enum FetchResponse {
+    #[oai(status = 200)]
+    Ok(PlainText<String>),
+
+    #[oai(status = 500)]
+    Error(PlainText<String>),
+}
+
+#[derive(ApiResponse, Debug)]
+enum ProcessResponse {
     #[oai(status = 200)]
     Ok(PlainText<String>),
 
@@ -22,6 +36,21 @@ impl Api {
         }
     }
 
+    #[oai(path = "/process", method = "post")]
+    async fn process(&self) -> Result<ProcessResponse> {
+        let f = std::fs::read_to_string("./temp/nix.json")
+            .map_err(|_| ProcessResponse::Error(PlainText("file read error".to_string())))?;
+
+        let r: Vec<flake_info::data::Export> = serde_json::from_str(&f).map_err(|e| {
+            println!("{:?}", e);
+            ProcessResponse::Error(PlainText("json error".to_string()))
+        })?;
+
+        println!("{}", r.len());
+
+        Ok(ProcessResponse::Ok(PlainText("ok".to_string())))
+    }
+
     #[oai(path = "/fetch", method = "post")]
     async fn fetch(&self) -> Result<FetchResponse> {
         let res = flake_info::data::Source::nixpkgs("24.11".to_string())
@@ -36,8 +65,62 @@ impl Api {
         .map_err(|err| {
             println!("{:?}", err);
             FetchResponse::Error(PlainText("".to_string()))
+        })?;
+
+        i.iter().for_each(|Export { flake, item }| {
+            match flake {
+                Some(flake) => {}
+                _ => (),
+            };
+
+            match item {
+                Derivation::App {
+                    app_attr_name,
+                    app_platforms,
+                    app_type,
+                    app_bin,
+                } => {}
+                Derivation::Package {
+                    package_attr_name,
+                    package_attr_set,
+                    package_pname,
+                    package_pversion,
+                    package_platforms,
+                    package_outputs,
+                    package_default_output,
+                    package_programs,
+                    package_license,
+                    package_license_set,
+                    package_maintainers,
+                    package_maintainers_set,
+                    package_description,
+                    package_longDescription,
+                    package_hydra,
+                    package_system,
+                    package_homepage,
+                    package_position,
+                } => {}
+                Derivation::Option {
+                    option_source,
+                    option_name,
+                    option_description,
+                    option_type,
+                    option_default,
+                    option_example,
+                    option_flake,
+                } => {}
+            }
         });
-        println!("{:?}", i);
+
+        let mut f = std::fs::File::create("temp/nix.json").map_err(|e| {
+            eprintln!("{:?}", e);
+            FetchResponse::Error(PlainText("file open error".to_string()))
+        })?;
+
+        let j = serde_json::to_string(&i)
+            .map_err(|_| FetchResponse::Error(PlainText("serialize error".to_string())))?;
+        let _ = f.write_all(j.as_bytes());
+
         Ok(FetchResponse::Ok(PlainText("".to_string())))
     }
 }
