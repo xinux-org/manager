@@ -9,29 +9,30 @@ use crate::data::Nixpkgs;
 use crate::Source;
 
 pub fn get_nixpkgs_info(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
-    let mut command = Command::new("nix-env");
-    command.add_args(&[
-        "--json",
-        "-f",
-        "<nixpkgs>",
-        "-I",
-        format!("nixpkgs={}", nixpkgs.to_flake_ref()).as_str(),
-        "--arg",
-        "config",
-        "import <nixpkgs/pkgs/top-level/packages-config.nix>",
-        "-qa",
-        "--meta",
-    ]);
-
-    command.enable_capture();
-    command.log_to = LogTo::Log;
-    command.log_output_on_error = true;
-
-    let cow = command
-        .run()
-        .with_context(|| "Failed to gather information about nixpkgs packages")?;
-
-    let output = &*cow.stdout_string_lossy();
+    // let mut command = Command::new("nix-env");
+    // command.add_args([
+    //     "--json",
+    //     "-f",
+    //     "<nixpkgs>",
+    //     "-I",
+    //     format!("nixpkgs={}", nixpkgs.to_flake_ref()).as_str(),
+    //     "--arg",
+    //     "config",
+    //     "import <nixpkgs/pkgs/top-level/packages-config.nix>",
+    //     "-qa",
+    //     "--meta",
+    // ]);
+    //
+    // command.enable_capture();
+    // command.log_to = LogTo::Log;
+    // command.log_output_on_error = true;
+    //
+    // let cow = command
+    //     .run()
+    //     .with_context(|| "Failed to gather information about nixpkgs packages")?;
+    //
+    // let output = &*cow.stdout_string_lossy();
+    let output = include_str!("../../examples/test-single-firefox.json");
     let de = &mut Deserializer::from_str(output);
     let attr_set: HashMap<String, Package> =
         serde_path_to_error::deserialize(de).with_context(|| "Could not parse packages")?;
@@ -60,7 +61,7 @@ pub fn get_nixpkgs_info(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
 
 pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet<String>>> {
     let mut command = Command::new("nix-instantiate");
-    command.add_args(&[
+    command.add_args([
         "--eval",
         "--json",
         "-I",
@@ -80,6 +81,7 @@ pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet
     let output = &*cow.stdout_string_lossy();
     let programs_db: &str = serde_json::from_str(output)?;
     let conn = rusqlite::Connection::open(programs_db)?;
+
     let mut programs: HashMap<String, HashSet<String>> = HashMap::new();
     let _ = conn
         .prepare("SELECT name, package FROM Programs")?
@@ -94,7 +96,7 @@ pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet
 }
 
 pub fn get_nixpkgs_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
-    let mut command = Command::with_args("nix", &["eval", "--json"]);
+    let mut command = Command::with_args("nix", ["eval", "--json"]);
     command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
     command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
     command.add_arg("nixos-options");

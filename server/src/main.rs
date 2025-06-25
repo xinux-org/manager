@@ -60,7 +60,7 @@ impl Api {
 
         let i = flake_info::process_nixpkgs(
             &flake_info::data::Source::Nixpkgs(res),
-            &flake_info::data::import::Kind::All,
+            &flake_info::data::import::Kind::Package,
         )
         .map_err(|err| {
             println!("{:?}", err);
@@ -99,7 +99,9 @@ impl Api {
                     package_system,
                     package_homepage,
                     package_position,
-                } => {}
+                } => {
+                    println!("{:?}", package_homepage);
+                }
                 Derivation::Option {
                     option_source,
                     option_name,
