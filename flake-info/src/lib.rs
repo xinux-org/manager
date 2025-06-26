@@ -3,7 +3,10 @@
 use anyhow::Result;
 use data::{import::Kind, Export, Flake, Source};
 use lazy_static::lazy_static;
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 pub mod commands;
 pub mod data;
@@ -56,6 +59,29 @@ pub fn process_nixpkgs(nixpkgs: &Source, kind: &Kind) -> Result<Vec<Export>, any
     all.append(&mut options);
 
     let exports = all
+        .into_iter()
+        .map(Export::nixpkgs)
+        .collect::<Result<Vec<Export>>>()?;
+    Ok(exports)
+}
+
+pub fn process_test(name: &str, kind: &Kind) -> Result<Vec<Export>, anyhow::Error> {
+    let tests = HashMap::from([(
+        "test-single-firefox",
+        include_str!("../fixtures/test-single-firefox.json"),
+    )]);
+
+    let drvs = if matches!(kind, Kind::All | Kind::Package) {
+        if let Some(output) = tests.get(name) {
+            commands::get_test_nixpkgs_info(output)?
+        } else {
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
+
+    let exports = drvs
         .into_iter()
         .map(Export::nixpkgs)
         .collect::<Result<Vec<Export>>>()?;

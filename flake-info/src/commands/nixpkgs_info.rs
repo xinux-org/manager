@@ -9,30 +9,29 @@ use crate::data::Nixpkgs;
 use crate::Source;
 
 pub fn get_nixpkgs_info(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
-    // let mut command = Command::new("nix-env");
-    // command.add_args([
-    //     "--json",
-    //     "-f",
-    //     "<nixpkgs>",
-    //     "-I",
-    //     format!("nixpkgs={}", nixpkgs.to_flake_ref()).as_str(),
-    //     "--arg",
-    //     "config",
-    //     "import <nixpkgs/pkgs/top-level/packages-config.nix>",
-    //     "-qa",
-    //     "--meta",
-    // ]);
-    //
-    // command.enable_capture();
-    // command.log_to = LogTo::Log;
-    // command.log_output_on_error = true;
-    //
-    // let cow = command
-    //     .run()
-    //     .with_context(|| "Failed to gather information about nixpkgs packages")?;
-    //
-    // let output = &*cow.stdout_string_lossy();
-    let output = include_str!("../../examples/test-single-firefox.json");
+    let mut command = Command::new("nix-env");
+    command.add_args([
+        "--json",
+        "-f",
+        "<nixpkgs>",
+        "-I",
+        format!("nixpkgs={}", nixpkgs.to_flake_ref()).as_str(),
+        "--arg",
+        "config",
+        "import <nixpkgs/pkgs/top-level/packages-config.nix>",
+        "-qa",
+        "--meta",
+    ]);
+
+    command.enable_capture();
+    command.log_to = LogTo::Log;
+    command.log_output_on_error = true;
+
+    let cow = command
+        .run()
+        .with_context(|| "Failed to gather information about nixpkgs packages")?;
+
+    let output = &*cow.stdout_string_lossy();
     let de = &mut Deserializer::from_str(output);
     let attr_set: HashMap<String, Package> =
         serde_path_to_error::deserialize(de).with_context(|| "Could not parse packages")?;
@@ -41,6 +40,30 @@ pub fn get_nixpkgs_info(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
         Source::Nixpkgs(nixpkgs) => get_nixpkgs_programs(nixpkgs)?,
         _ => Default::default(),
     };
+
+    Ok(attr_set
+        .into_iter()
+        .map(|(attribute, package)| {
+            let programs = programs
+                .remove(&attribute)
+                .unwrap_or_default()
+                .into_iter()
+                .collect();
+            NixpkgsEntry::Derivation {
+                attribute,
+                package,
+                programs,
+            }
+        })
+        .collect())
+}
+
+pub fn get_test_nixpkgs_info(output: &str) -> Result<Vec<NixpkgsEntry>> {
+    let de = &mut Deserializer::from_str(output);
+    let attr_set: HashMap<String, Package> =
+        serde_path_to_error::deserialize(de).with_context(|| "Could not parse packages")?;
+
+    let mut programs: HashMap<String, HashSet<String>> = Default::default();
 
     Ok(attr_set
         .into_iter()

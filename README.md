@@ -38,8 +38,8 @@ In order to accomplish our goals we need to work on following paths:
 
 ### TODO:
 
-- [ ] Make database scheme (try to normalize it)
-- [ ] Use diesel sql
+- [x] Make database scheme (try to normalize it)
+- [x] Use diesel sql
 - [ ] Ability to process test firefox asset and store it in db
 - [ ] Ability to process multiple packages with different versions and/or duplicate ones
 - [ ] Ability to process whole nixpkgs

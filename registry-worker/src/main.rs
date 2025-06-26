@@ -19,14 +19,28 @@ pub fn create_platform(conn: &mut PgConnection, name: &str) -> Platform {
         .expect("Error creating platform")
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     dotenv().ok();
 
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let mut conn = PgConnection::establish(&database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
+    // let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    // let mut conn = PgConnection::establish(&database_url)
+    //     .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
 
-    let platform = create_platform(&mut conn, "x86_64-linux");
+    // let platform = create_platform(&mut conn, "x86_64-linux");
+    //
+    // println!("Hello, world!, {:?}", platform);
 
-    println!("Hello, world!, {:?}", platform);
+    // let res = flake_info::data::Source::nixpkgs("25.05".to_string())
+    //     .await
+    //     .expect("Failed to fetch latest ref");
+    // println!("{:?}", res);
+
+    let export = flake_info::process_test(
+        "test-single-firefox",
+        &flake_info::data::import::Kind::Package,
+    )
+    .expect("Failed to process");
+
+    println!("{:?}", export);
 }
