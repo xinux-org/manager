@@ -1,9 +1,11 @@
 use std::env;
 
+use context::Context;
 use diesel::prelude::*;
 use dotenvy::dotenv;
 use process::process_exports;
 
+mod context;
 mod models;
 mod process;
 mod schema;
@@ -13,8 +15,10 @@ async fn main() {
     dotenv().ok();
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let mut conn = PgConnection::establish(&database_url)
+    let conn = PgConnection::establish(&database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
+
+    let mut ctx = Context::new(conn);
 
     let exports = flake_info::process_test(
         "test-single-firefox",
@@ -22,5 +26,5 @@ async fn main() {
     )
     .expect("Failed to process");
 
-    process_exports(&mut conn, &exports).await;
+    process_exports(&mut ctx, &exports).await;
 }
