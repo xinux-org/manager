@@ -1,17 +1,17 @@
 CREATE TABLE "maintainers"(
-	"id" INT4 NOT NULL PRIMARY KEY,
+	"id" SERIAL PRIMARY KEY,
 	"name" VARCHAR NOT NULL,
 	"github" VARCHAR,
 	"email" VARCHAR
 );
 
 CREATE TABLE "revisions"(
-	"id" INT4 NOT NULL PRIMARY KEY,
+	"id" SERIAL PRIMARY KEY,
 	"source_id" INT4 NOT NULL
 );
 
 CREATE TABLE "licenses"(
-	"id" INT4 NOT NULL PRIMARY KEY,
+	"id" SERIAL PRIMARY KEY,
 	"name" VARCHAR NOT NULL,
 	"license" VARCHAR,
 	"fullname" VARCHAR,
@@ -20,22 +20,22 @@ CREATE TABLE "licenses"(
 );
 
 CREATE TABLE "sources"(
-	"id" INT4 NOT NULL PRIMARY KEY
+	"id" SERIAL PRIMARY KEY
 );
 
 CREATE TABLE "packages"(
-	"id" INT4 NOT NULL PRIMARY KEY,
+	"id" SERIAL PRIMARY KEY,
 	"description" VARCHAR NOT NULL,
 	"homepage" VARCHAR NOT NULL
 );
 
 CREATE TABLE "platforms"(
-	"id" INT4 NOT NULL PRIMARY KEY,
-	"name" VARCHAR NOT NULL
+	"id" SERIAL PRIMARY KEY,
+	"name" VARCHAR NOT NULL CONSTRAINT "platforms_unique_name" UNIQUE
 );
 
 CREATE TABLE "package_versions"(
-	"id" INT4 NOT NULL PRIMARY KEY,
+	"id" SERIAL PRIMARY KEY,
 	"revision_id" INT4 NOT NULL,
 	"package_id" INT4 NOT NULL,
 	"license_id" INT4 NOT NULL,
@@ -50,7 +50,7 @@ CREATE TABLE "package_versions"(
 );
 
 CREATE TABLE "package_versions_platforms"(
-	"id" INT4 NOT NULL PRIMARY KEY,
+	"id" SERIAL PRIMARY KEY,
 	"package_version_id" INT4 NOT NULL,
 	"platform_id" INT4 NOT NULL,
 	FOREIGN KEY ("package_version_id") REFERENCES "package_versions"("id"),
@@ -58,7 +58,7 @@ CREATE TABLE "package_versions_platforms"(
 );
 
 CREATE TABLE "package_versions_maintainers"(
-	"id" INT4 NOT NULL PRIMARY KEY,
+	"id" SERIAL PRIMARY KEY,
 	"package_version_id" INT4 NOT NULL,
 	"maintainer_id" INT4 NOT NULL,
 	FOREIGN KEY ("package_version_id") REFERENCES "package_versions"("id"),
