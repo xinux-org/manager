@@ -3,6 +3,7 @@ use std::env;
 use context::Context;
 use diesel::prelude::*;
 use dotenvy::dotenv;
+use models::{NixpkgsSource, Source};
 use process::process_exports;
 
 mod context;
@@ -20,11 +21,19 @@ async fn main() {
 
     let mut ctx = Context::new(conn);
 
+    let channel = "test";
+    let git_ref = "test";
+
+    let source = NixpkgsSource::find_by_channel_and_ref(&mut ctx.pg_conn, channel, git_ref)
+        .or_else(|_| NixpkgsSource::create(&mut ctx.pg_conn, channel, git_ref))
+        .map(Source::Nixpkgs)
+        .expect("Could not create source");
+
     let exports = flake_info::process_test(
         "test-single-firefox",
         &flake_info::data::import::Kind::Package,
     )
     .expect("Failed to process");
 
-    process_exports(&mut ctx, &exports).await;
+    process_exports(&mut ctx, &source, &exports).await;
 }

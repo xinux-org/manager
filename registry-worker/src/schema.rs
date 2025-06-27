@@ -49,13 +49,15 @@ diesel::table! {
     package_versions (id) {
         id -> Int4,
         package_id -> Int4,
-        license_id -> Int4,
         available -> Bool,
         broken -> Bool,
         insecure -> Bool,
-        changelog -> Varchar,
         version -> Varchar,
-        source_id -> Int4,
+        nixpkgs_source_id -> Nullable<Int4>,
+        git_source_id -> Nullable<Int4>,
+        git_host_source_id -> Nullable<Int4>,
+        license_id -> Nullable<Int4>,
+        changelog -> Nullable<Varchar>,
     }
 }
 
@@ -78,8 +80,9 @@ diesel::table! {
 diesel::table! {
     packages (id) {
         id -> Int4,
-        description -> Varchar,
-        homepage -> Varchar,
+        name -> Varchar,
+        description -> Nullable<Varchar>,
+        homepage -> Nullable<Varchar>,
     }
 }
 
@@ -90,16 +93,6 @@ diesel::table! {
     }
 }
 
-diesel::table! {
-    sources (id) {
-        id -> Int4,
-        nixpkgs_source_id -> Nullable<Int4>,
-        git_host_source_id -> Nullable<Int4>,
-        git_source_id -> Nullable<Int4>,
-    }
-}
-
-diesel::joinable!(package_versions -> licenses (license_id));
 diesel::joinable!(package_versions -> packages (package_id));
 diesel::joinable!(package_versions_maintainers -> maintainers (maintainer_id));
 diesel::joinable!(package_versions_maintainers -> package_versions (package_version_id));
@@ -117,5 +110,4 @@ diesel::allow_tables_to_appear_in_same_query!(
     package_versions_platforms,
     packages,
     platforms,
-    sources,
 );
