@@ -93,6 +93,9 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(package_versions -> git_host_sources (git_host_source_id));
+diesel::joinable!(package_versions -> git_sources (git_source_id));
+diesel::joinable!(package_versions -> nixpkgs_sources (nixpkgs_source_id));
 diesel::joinable!(package_versions -> packages (package_id));
 diesel::joinable!(package_versions_maintainers -> maintainers (maintainer_id));
 diesel::joinable!(package_versions_maintainers -> package_versions (package_version_id));
