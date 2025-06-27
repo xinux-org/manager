@@ -1,19 +1,23 @@
+pub mod git_host_source;
+pub mod git_source;
 pub mod license;
 pub mod maintainer;
+pub mod nixpkgs_source;
 pub mod package;
 pub mod package_version;
 pub mod package_version_maintainer;
 pub mod package_version_platform;
 pub mod platform;
-pub mod revision;
 pub mod source;
 
+pub use git_host_source::*;
+pub use git_source::*;
 pub use license::*;
 pub use maintainer::*;
+pub use nixpkgs_source::*;
 pub use package::*;
 pub use package_version::*;
 pub use package_version_maintainer::*;
 pub use package_version_platform::*;
 pub use platform::*;
-pub use revision::*;
 pub use source::*;
