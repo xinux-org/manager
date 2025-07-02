@@ -7,6 +7,7 @@ pub struct NixpkgsSource {
     pub id: i32,
     pub channel: String,
     pub git_ref: String,
+    pub processed: bool,
 }
 
 #[derive(Insertable)]
@@ -14,6 +15,12 @@ pub struct NixpkgsSource {
 pub struct NewNixpkgSource<'a> {
     pub channel: &'a str,
     pub git_ref: &'a str,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = nixpkgs_sources)]
+pub struct ProcessedNixpkgSource {
+    pub processed: bool,
 }
 
 impl NixpkgsSource {
@@ -48,5 +55,19 @@ impl NixpkgsSource {
             .values(&new_row)
             .returning(Self::as_returning())
             .get_result(conn)
+    }
+
+    pub fn update_processed(
+        self: &Self,
+        conn: &mut PgConnection,
+        processed: bool,
+    ) -> QueryResult<()> {
+        use crate::schema::nixpkgs_sources::dsl;
+
+        diesel::update(dsl::nixpkgs_sources)
+            .filter(dsl::id.eq(self.id))
+            .set(dsl::processed.eq(processed))
+            .execute(conn)
+            .map(|_| ())
     }
 }

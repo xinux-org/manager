@@ -11,8 +11,8 @@ use std::{
 pub mod commands;
 pub mod data;
 
-#[cfg(feature = "elastic")]
-pub mod elastic;
+// #[cfg(feature = "elastic")]
+// pub mod elastic;
 
 pub use commands::get_flake_info;
 use log::trace;

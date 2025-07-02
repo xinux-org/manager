@@ -7,6 +7,7 @@ diesel::table! {
         owner -> Varchar,
         repo -> Varchar,
         git_ref -> Varchar,
+        processed -> Bool,
     }
 }
 
@@ -14,6 +15,7 @@ diesel::table! {
     git_sources (id) {
         id -> Int4,
         url -> Varchar,
+        processed -> Bool,
     }
 }
 
@@ -25,6 +27,16 @@ diesel::table! {
         fullname -> Nullable<Varchar>,
         shortname -> Nullable<Varchar>,
         url -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
+    package_versions_sources (id) {
+        id -> Int4,
+        package_version_id -> Int4,
+        nixpkgs_source_id -> Nullable<Int4>,
+        git_source_id -> Nullable<Int4>,
+        git_host_source_id -> Nullable<Int4>,
     }
 }
 
@@ -42,6 +54,7 @@ diesel::table! {
         id -> Int4,
         channel -> Varchar,
         git_ref -> Varchar,
+        processed -> Bool,
     }
 }
 
@@ -53,9 +66,6 @@ diesel::table! {
         broken -> Bool,
         insecure -> Bool,
         version -> Varchar,
-        nixpkgs_source_id -> Nullable<Int4>,
-        git_source_id -> Nullable<Int4>,
-        git_host_source_id -> Nullable<Int4>,
         license_id -> Nullable<Int4>,
         changelog -> Nullable<Varchar>,
     }
@@ -93,9 +103,10 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(package_versions -> git_host_sources (git_host_source_id));
-diesel::joinable!(package_versions -> git_sources (git_source_id));
-diesel::joinable!(package_versions -> nixpkgs_sources (nixpkgs_source_id));
+diesel::joinable!(package_versions_sources -> package_versions (package_version_id));
+diesel::joinable!(package_versions_sources -> nixpkgs_sources (nixpkgs_source_id));
+diesel::joinable!(package_versions_sources -> git_host_sources (git_host_source_id));
+diesel::joinable!(package_versions_sources -> git_sources (git_source_id));
 diesel::joinable!(package_versions -> packages (package_id));
 diesel::joinable!(package_versions_maintainers -> maintainers (maintainer_id));
 diesel::joinable!(package_versions_maintainers -> package_versions (package_version_id));

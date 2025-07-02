@@ -7,6 +7,7 @@ pub mod package;
 pub mod package_version;
 pub mod package_version_maintainer;
 pub mod package_version_platform;
+pub mod package_version_source;
 pub mod platform;
 pub mod source;
 
@@ -19,6 +20,6 @@ pub use package::*;
 pub use package_version::*;
 pub use package_version_maintainer::*;
 pub use package_version_platform::*;
+pub use package_version_source::*;
 pub use platform::*;
 pub use source::*;
-

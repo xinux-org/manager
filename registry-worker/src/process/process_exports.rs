@@ -1,6 +1,8 @@
 use crate::{
     context::Context,
-    models::{Package, PackageVersion, PackageVersionPlatform, Platform, Source},
+    models::{
+        Package, PackageVersion, PackageVersionPlatform, PackageVersionSource, Platform, Source,
+    },
 };
 
 pub async fn process_exports(
@@ -48,11 +50,16 @@ pub async fn process_exports(
 
                             let _ = PackageVersion::create_from(
                                 &mut ctx.pg_conn,
-                                source,
                                 package,
                                 &export.item,
                             )
                             .inspect(|package_version| {
+                                let _ = PackageVersionSource::create(
+                                    &mut ctx.pg_conn,
+                                    package_version,
+                                    source,
+                                );
+
                                 let _ = PackageVersionPlatform::create_all_only(
                                     &mut ctx.pg_conn,
                                     package_version,

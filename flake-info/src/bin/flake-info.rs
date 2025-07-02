@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use flake_info::commands::NixCheckError;
 use flake_info::data::import::Kind;
 use flake_info::data::{self, Export, Source};
-use flake_info::elastic::{self, ElasticsearchError, ExistsStrategy};
+// use flake_info::elastic::{self, ElasticsearchError, ExistsStrategy};
 use log::{error, info, warn};
 use sha2::Digest;
 use std::io;
@@ -90,73 +90,73 @@ enum Command {
     },
 }
 
-#[derive(StructOpt, Debug)]
-struct ElasticOpts {
-    #[structopt(long = "json", help = "Print ElasticSeach Compatible JSON output")]
-    json: bool,
-
-    #[structopt(
-        long = "push",
-        help = "Push to Elasticsearch (Configure using FI_ES_* environment variables)",
-        requires("elastic-schema-version")
-    )]
-    enable: bool,
-
-    // #[structopt(
-    //     long,
-    //     short = "u",
-    //     env = "FI_ES_USER",
-    //     help = "Elasticsearch username (unimplemented)"
-    // )]
-    // elastic_user: Option<String>,
-
-    // #[structopt(
-    //     long,
-    //     short = "p",
-    //     env = "FI_ES_PASSWORD",
-    //     help = "Elasticsearch password (unimplemented)"
-    // )]
-    // elastic_pw: Option<String>,
-    #[structopt(
-        long,
-        env = "FI_ES_URL",
-        default_value = "http://localhost:9200",
-        help = "Elasticsearch instance url"
-    )]
-    elastic_url: String,
-
-    #[structopt(
-        long,
-        help = "Name of the index to store results to",
-        env = "FI_ES_INDEX",
-        required_if("enable", "true")
-    )]
-    elastic_index_name: Option<String>,
-
-    #[structopt(
-        long,
-        help = "How to react to existing indices",
-        possible_values = &ExistsStrategy::variants(),
-        case_insensitive = true,
-        default_value = "abort",
-        env = "FI_ES_EXISTS_STRATEGY"
-    )]
-    elastic_exists: ExistsStrategy,
-
-    #[structopt(
-        long,
-        help = "Which schema version to associate with the operation",
-        env = "FI_ES_VERSION"
-    )]
-    elastic_schema_version: Option<usize>,
-
-    #[structopt(
-        long,
-        help = "Whether to disable `latest` alias creation",
-        env = "FI_ES_NO_ALIAS"
-    )]
-    no_alias: bool,
-}
+// #[derive(StructOpt, Debug)]
+// struct ElasticOpts {
+//     #[structopt(long = "json", help = "Print ElasticSeach Compatible JSON output")]
+//     json: bool,
+//
+//     #[structopt(
+//         long = "push",
+//         help = "Push to Elasticsearch (Configure using FI_ES_* environment variables)",
+//         requires("elastic-schema-version")
+//     )]
+//     enable: bool,
+//
+//     // #[structopt(
+//     //     long,
+//     //     short = "u",
+//     //     env = "FI_ES_USER",
+//     //     help = "Elasticsearch username (unimplemented)"
+//     // )]
+//     // elastic_user: Option<String>,
+//
+//     // #[structopt(
+//     //     long,
+//     //     short = "p",
+//     //     env = "FI_ES_PASSWORD",
+//     //     help = "Elasticsearch password (unimplemented)"
+//     // )]
+//     // elastic_pw: Option<String>,
+//     #[structopt(
+//         long,
+//         env = "FI_ES_URL",
+//         default_value = "http://localhost:9200",
+//         help = "Elasticsearch instance url"
+//     )]
+//     elastic_url: String,
+//
+//     #[structopt(
+//         long,
+//         help = "Name of the index to store results to",
+//         env = "FI_ES_INDEX",
+//         required_if("enable", "true")
+//     )]
+//     elastic_index_name: Option<String>,
+//
+//     #[structopt(
+//         long,
+//         help = "How to react to existing indices",
+//         possible_values = &ExistsStrategy::variants(),
+//         case_insensitive = true,
+//         default_value = "abort",
+//         env = "FI_ES_EXISTS_STRATEGY"
+//     )]
+//     elastic_exists: ExistsStrategy,
+//
+//     #[structopt(
+//         long,
+//         help = "Which schema version to associate with the operation",
+//         env = "FI_ES_VERSION"
+//     )]
+//     elastic_schema_version: Option<usize>,
+//
+//     #[structopt(
+//         long,
+//         help = "Whether to disable `latest` alias creation",
+//         env = "FI_ES_NO_ALIAS"
+//     )]
+//     no_alias: bool,
+// }
 
 type LazyExports = Box<dyn FnOnce() -> Result<Vec<Export>, FlakeInfoError>>;
 
@@ -166,19 +166,19 @@ async fn main() -> Result<()> {
 
     let args = Args::from_args();
 
-    anyhow::ensure!(
-        args.elastic.enable || args.elastic.json,
-        "at least one of --push or --json must be specified"
-    );
+    // anyhow::ensure!(
+    //     args.elastic.enable || args.elastic.json,
+    //     "at least one of --push or --json must be specified"
+    // );
 
-    let (exports, ident) = run_command(args.command, args.kind, &args.extra).await?;
+    // let (exports, ident) = run_command(args.command, args.kind, &args.extra).await?;
 
-    if args.elastic.enable {
-        push_to_elastic(&args.elastic, exports, ident).await?;
-    } else if args.elastic.json {
-        println!("{}", serde_json::to_string(&exports()?)?);
-    }
-    Ok(())
+    // if args.elastic.enable {
+    //     push_to_elastic(&args.elastic, exports, ident).await?;
+    // } else if args.elastic.json {
+    //     println!("{}", serde_json::to_string(&exports()?)?);
+    // }
+    // Ok(())
 }
 
 #[derive(Debug, Error)]
@@ -326,73 +326,73 @@ async fn run_command(
     }
 }
 
-async fn push_to_elastic(
-    elastic: &ElasticOpts,
-    exports: LazyExports,
-    ident: (String, String, String),
-) -> Result<()> {
-    let (index, alias) = elastic
-        .elastic_index_name
-        .to_owned()
-        .map(|ident| {
-            (
-                format!("{}-{}", elastic.elastic_schema_version.unwrap(), ident),
-                None,
-            )
-        })
-        .or_else(|| {
-            let (kind, name, hash) = ident;
-            let ident = format!(
-                "{}-{}-{}-{}",
-                kind,
-                elastic.elastic_schema_version.unwrap(),
-                &name,
-                hash
-            );
-            let alias = format!(
-                "latest-{}-{}-{}",
-                elastic.elastic_schema_version.unwrap(),
-                kind,
-                &name
-            );
-
-            warn!("Using automatic index identifier: {}", ident);
-            Some((ident, Some(alias)))
-        })
-        .unwrap();
-
-    let es = elastic::Elasticsearch::new(elastic.elastic_url.as_str())?;
-    let config = elastic::Config {
-        index: &index,
-        exists_strategy: elastic.elastic_exists,
-    };
-
-    // catch error variant if abort strategy was triggered
-    let ensure = es.ensure_index(&config).await;
-    if let Err(ElasticsearchError::IndexExistsError(_)) = ensure {
-        // abort on abort
-        return Ok(());
-    } else {
-        // throw error if present
-        ensure?;
-    }
-
-    let successes = exports()?;
-
-    info!("Pushing to elastic");
-    es.push_exports(&config, &successes)
-        .await
-        .with_context(|| "Failed to push results to elasticsearch".to_string())?;
-
-    if let Some(alias) = alias {
-        if !elastic.no_alias {
-            es.write_alias(&config, &index, &alias)
-                .await
-                .with_context(|| "Failed to create alias".to_string())?;
-        } else {
-            warn!("Creating alias disabled")
-        }
-    }
-
-    Ok(())
-}
+// async fn push_to_elastic(
+//     elastic: &ElasticOpts,
+//     exports: LazyExports,
+//     ident: (String, String, String),
+// ) -> Result<()> {
+//     let (index, alias) = elastic
+//         .elastic_index_name
+//         .to_owned()
+//         .map(|ident| {
+//             (
+//                 format!("{}-{}", elastic.elastic_schema_version.unwrap(), ident),
+//                 None,
+//             )
+//         })
+//         .or_else(|| {
+//             let (kind, name, hash) = ident;
+//             let ident = format!(
+//                 "{}-{}-{}-{}",
+//                 kind,
+//                 elastic.elastic_schema_version.unwrap(),
+//                 &name,
+//                 hash
+//             );
+//             let alias = format!(
+//                 "latest-{}-{}-{}",
+//                 elastic.elastic_schema_version.unwrap(),
+//                 kind,
+//                 &name
+//             );
+//
+//             warn!("Using automatic index identifier: {}", ident);
+//             Some((ident, Some(alias)))
+//         })
+//         .unwrap();
+//
+//     let es = elastic::Elasticsearch::new(elastic.elastic_url.as_str())?;
+//     let config = elastic::Config {
+//         index: &index,
+//         exists_strategy: elastic.elastic_exists,
+//     };
+//
+//     // catch error variant if abort strategy was triggered
+//     let ensure = es.ensure_index(&config).await;
+//     if let Err(ElasticsearchError::IndexExistsError(_)) = ensure {
+//         // abort on abort
+//         return Ok(());
+//     } else {
+//         // throw error if present
+//         ensure?;
+//     }
+//
+//     let successes = exports()?;
+//
+//     info!("Pushing to elastic");
+//     es.push_exports(&config, &successes)
+//         .await
+//         .with_context(|| "Failed to push results to elasticsearch".to_string())?;
+//
+//     if let Some(alias) = alias {
+//         if !elastic.no_alias {
+//             es.write_alias(&config, &index, &alias)
+//                 .await
+//                 .with_context(|| "Failed to create alias".to_string())?;
+//         } else {
+//             warn!("Creating alias disabled")
+//         }
+//     }
+//
+//     Ok(())
+// }

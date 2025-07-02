@@ -43,7 +43,7 @@ In order to accomplish our goals we need to work on following paths:
 - [x] Ability to process test firefox asset and store it in db
 - [ ] Process all available fields of a package and package version
 - [ ] Ability to process multiple packages with different versions and/or duplicate ones
-- [ ] Ability to process whole nixpkgs
+- [x] Ability to process whole nixpkgs
 - [ ] Ability to monitor and process latest nixpkgs channels/revisions
 - [ ] Ability to peek historical versions/channels
 

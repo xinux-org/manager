@@ -25,14 +25,14 @@ reqwest = { version = "0.11", features = ["json", "blocking"] }
 sha2 = "0.9"
 pandoc = "0.8.10"
 semver = "1.0"
-elasticsearch = { git = "https://github.com/elastic/elasticsearch-rs", features = [
-  "rustls-tls",
-], optional = true }
+# elasticsearch = { git = "https://github.com/elastic/elasticsearch-rs", features = [
+#   "rustls-tls",
+# ], optional = true }
 rusqlite = "0.32.1"
 
-[features]
-default = ["elastic"]
-elastic = ["elasticsearch"]
+# [features]
+# default = ["elastic"]
+# elastic = ["elasticsearch"]
 
 [lib]
 name = "flake_info"

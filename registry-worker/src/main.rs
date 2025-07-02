@@ -21,19 +21,72 @@ async fn main() {
 
     let mut ctx = Context::new(conn);
 
+    // test_single(&mut ctx).await;
+    latest_nixpkgs(&mut ctx).await;
+}
+
+async fn test_single(ctx: &mut Context) {
     let channel = "test";
     let git_ref = "test";
 
-    let source = NixpkgsSource::find_by_channel_and_ref(&mut ctx.pg_conn, channel, git_ref)
-        .or_else(|_| NixpkgsSource::create(&mut ctx.pg_conn, channel, git_ref))
-        .map(Source::Nixpkgs)
-        .expect("Could not create source");
+    let (source, created) =
+        NixpkgsSource::find_by_channel_and_ref(&mut ctx.pg_conn, channel, git_ref)
+            .map(|source| (source, false))
+            .or_else(|_| {
+                NixpkgsSource::create(&mut ctx.pg_conn, channel, git_ref)
+                    .map(|source| (source, true))
+            })
+            .map(|(source, created)| (Source::Nixpkgs(source), created))
+            .expect("Could not create source");
 
-    let exports = flake_info::process_test(
-        "test-single-firefox",
-        &flake_info::data::import::Kind::Package,
+    if created || !source.is_processed() {
+        let exports = flake_info::process_test(
+            "test-single-firefox",
+            &flake_info::data::import::Kind::Package,
+        )
+        .expect("Failed to process");
+
+        process_exports(ctx, &source, &exports).await;
+
+        source
+            .set_processed(&mut ctx.pg_conn, true)
+            .expect("Failed to update processed");
+    }
+}
+
+async fn latest_nixpkgs(ctx: &mut Context) {
+    let nixpkgs_source = flake_info::data::Source::nixpkgs("25.05".to_string())
+        .await
+        .expect("failed to fetch nixpkgs latest revision");
+
+    let (source, created) = NixpkgsSource::find_by_channel_and_ref(
+        &mut ctx.pg_conn,
+        &nixpkgs_source.channel,
+        &nixpkgs_source.git_ref,
     )
-    .expect("Failed to process");
+    .map(|source| (source, false))
+    .or_else(|_| {
+        NixpkgsSource::create(
+            &mut ctx.pg_conn,
+            &nixpkgs_source.channel,
+            &nixpkgs_source.git_ref,
+        )
+        .map(|source| (source, true))
+    })
+    .map(|(source, created)| (Source::Nixpkgs(source), created))
+    .expect("Could not create source");
 
-    process_exports(&mut ctx, &source, &exports).await;
+    if created || !source.is_processed() {
+        let exports = flake_info::process_nixpkgs(
+            &flake_info::data::Source::Nixpkgs(nixpkgs_source),
+            &flake_info::data::import::Kind::Package,
+        )
+        .expect("Failed to process");
+
+        process_exports(ctx, &source, &exports).await;
+
+        source
+            .set_processed(&mut ctx.pg_conn, true)
+            .expect("Failed to update processed");
+    }
 }

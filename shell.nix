@@ -1,21 +1,19 @@
+pkgs:
 let
-  rust_overlay = import (
-    builtins.fetchTarball "https://github.com/oxalica/rust-overlay/archive/master.tar.gz"
-  );
-  nixpkgs = import <nixpkgs> { overlays = [ rust_overlay ]; };
-  rust_channel = nixpkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+  rust_channel = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 in
-with nixpkgs;
 pkgs.mkShell {
-  nativeBuildInputs =
-    [ pkg-config ]
-    ++ (with pkgs; [
+  nativeBuildInputs = (
+    with pkgs;
+    [
+      pkg-config
       openssl
       libgit2
       sqlite
       protobuf
       libpq
-    ]);
+    ]
+  );
 
   buildInputs = (
     with pkgs;
@@ -23,7 +21,7 @@ pkgs.mkShell {
       flutter
       android-tools
       pandoc
-      rustup
+      rust-bin.beta.latest.default
       diesel-cli
     ]
   );

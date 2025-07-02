@@ -1,13 +1,11 @@
 {
+  description = "xinux registry worker";
+
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    registry-worker = {
-      url = "path:registry-worker";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -17,7 +15,6 @@
       nixpkgs,
       flake-utils,
       rust-overlay,
-      registry-worker,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
@@ -27,12 +24,14 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
+        package = pkgs.callPackage ./default.nix pkgs;
       in
       {
-        devShells.default = pkgs.callPackage ./shell.nix pkgs;
         packages = {
-          registry-worker = registry-worker.defaultPackage.${system};
+          registry-worker = package;
+          default = package;
         };
+        defaultPackage = package;
       }
     );
 }
