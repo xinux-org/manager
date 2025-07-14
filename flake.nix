@@ -14,11 +14,11 @@
 
   outputs =
     {
+      self,
       nixpkgs,
       flake-utils,
       rust-overlay,
       registry-worker,
-      ...
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -37,7 +37,7 @@
     )
     // {
       nixosModules = {
-        registry-worker = import ./registry-worker/module.nix;
+        registry-worker = import ./registry-worker/module.nix self;
       };
     };
 }
