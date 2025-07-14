@@ -91,8 +91,8 @@ in
       };
 
       dataDir = mkOption {
-        type = types.path;
-        default = /var/lib/xinux-manager/regstiry-worker;
+        type = types.str;
+        default = "/var/lib/xinux-manager/regstiry-worker";
       };
 
       database = {
