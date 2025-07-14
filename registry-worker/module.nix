@@ -61,7 +61,7 @@ let
 
             diesel migration run
           '';
-          ExecStart = "${lib.getBin cfg.package}/bin/registry-worker ${genArgs { cfg = cfg; }}";
+          ExecStart = "${lib.getBin cfg.package}/bin/registry-worker";
           StateDirectory = cfg.user;
           StateDirectoryMode = "0750";
         };
