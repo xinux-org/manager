@@ -32,6 +32,7 @@ pkgs.rustPlatform.buildRustPackage {
     [
       pandoc
       sqlite.dev
+      openssl
       libpq
     ]
   );
