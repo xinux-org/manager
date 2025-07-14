@@ -44,6 +44,13 @@ let
         wants = [ "network-online.target" ];
         wantedBy = [ "multi-user.target" ];
 
+        path = with pkgs; [
+          coreutils
+          replace-secret
+          diesel-cli
+          diesel-cli-ext
+        ];
+
         serviceConfig = {
           User = cfg.user;
           Group = cfg.group;
