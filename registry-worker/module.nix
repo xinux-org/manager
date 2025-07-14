@@ -27,11 +27,11 @@ let
         enable = true;
         ensureUsers = [
           {
-            name = dbUsername;
+            name = databaseName;
             ensureDBOwnership = true;
           }
         ];
-        ensureDatabases = [ dbUsername ];
+        ensureDatabases = [ databaseName ];
       };
 
       systemd.services.xinux-manager-registry-worker = {
