@@ -34,5 +34,10 @@
           registry-worker = registry-worker.defaultPackage.${system};
         };
       }
-    );
+    )
+    // {
+      nixosModules = {
+        registry-worker = import ./registry-worker/module.nix;
+      };
+    };
 }

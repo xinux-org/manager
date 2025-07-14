@@ -9,33 +9,58 @@ let
   cfg = config.services.xinux-manager.registry-worker;
   system = pkgs.stdenv.hostPlatform.system;
   pkg = flake.packages.${system}.default;
+  databaseName = "xinux-registry";
+  localDatabase = ((cfg.database.host == "127.0.0.1") || (cfg.database.host == "localhost"));
 
   config1 =
     with lib;
     mkIf cfg.enable {
       users = {
         users.${cfg.user} = {
-          description = "Xinux Manager User";
           isSystemUser = true;
           group = cfg.group;
         };
         groups.${cfg.group} = { };
       };
 
-      systemd.services.xinux-manager-regstiry-worker = {
+      services.postgresql = {
+        enable = true;
+        ensureUsers = [
+          {
+            name = dbUsername;
+            ensureDBOwnership = true;
+          }
+        ];
+        ensureDatabases = [ dbUsername ];
+      };
+
+      systemd.services.xinux-manager-registry-worker = {
         description = ''
           xinux manager registry-worker is responsible for fetching and storing data about packages, options and flakes from various places, especially from nixos/nixpkgs
         '';
         documentation = [ "https://github.com/xinux-org/manager" ];
 
-        after = [ "network-online.target" ];
+        after = [ "network-online.target" ] ++ lib.optional localDatabase "postgresql.service";
         wants = [ "network-online.target" ];
         wantedBy = [ "multi-user.target" ];
 
         serviceConfig = {
           User = cfg.user;
           Group = cfg.group;
-          Restart = "always";
+          Restart = "on-failure";
+          WorkingDirectory = "${cfg.dataDir}";
+          ExecStartPre = ''
+            ${lib.optionalString cfg.database.socketAuth ''
+              echo "DATABASE_URL=postgres://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.socket}" > "${cfg.dataDir}/.env"
+            ''}
+
+            ${lib.optionalString (!cfg.database.socketAuth) ''
+              echo "DATABASE_URL=postgres://${cfg.database.user}:#password#@${cfg.database.host}/${cfg.database.name}" > "${cfg.dataDir}/.env"
+              replace-secret '#password#' '${cfg.database.passwordFile}' '${cfg.dataDir}/.env'
+            ''}
+
+            diesel migration run
+          '';
           ExecStart = "${lib.getBin cfg.package}/bin/registry-worker ${genArgs { cfg = cfg; }}";
           StateDirectory = cfg.user;
           StateDirectoryMode = "0750";
@@ -52,12 +77,12 @@ in
 
       user = mkOption {
         type = types.str;
-        default = "xinux-manager-regstiry-worker";
+        default = databaseName;
       };
 
       group = mkOption {
         type = types.str;
-        default = "xinux-manager";
+        default = databaseName;
       };
 
       package = mkOption {
@@ -65,26 +90,57 @@ in
         default = pkg;
       };
 
-      db = {
+      dataDir = mkOption {
+        type = types.path;
+        default = /var/lib/xinux-manager/regstiry-worker;
+      };
+
+      database = {
         host = mkOption {
           type = types.str;
-          default = "localhost";
+          default = "127.0.0.1";
+          description = "Database host address. Leave \"127.0.0.1\" if you want local database";
         };
+
+        socketAuth = mkOption {
+          type = types.bool;
+          default = if localDatabase then true else false;
+          description = "Use Unix socket authentication for PostgreSQL instead of password authentication when local database wanted.";
+        };
+
+        socket = mkOption {
+          type = types.nullOr types.path;
+          default = if localDatabase then "/run/postgresql" else null;
+          description = "Path to the PostgreSQL Unix socket.";
+        };
+
         port = mkOption {
-          type = types.number;
-          default = 5432;
+          type = types.port;
+          default = config.services.postgresql.settings.port;
+          defaultText = "5432";
+          description = "Database host port.";
         };
-        database = mkOption {
+
+        name = mkOption {
           type = types.str;
-          default = "registry";
+          default = "xinux-registry";
+          description = "Database name.";
         };
-        username = mkOption {
+
+        user = mkOption {
           type = types.str;
-          default = "username";
+          default = "xinux-registry";
+          description = "Database user.";
         };
-        password = mkOption {
-          type = types.str;
-          default = "password";
+
+        passwordFile = mkOption {
+          type = types.nullOr types.path;
+          default = null;
+          example = "/run/keys/${manifest-name}-dbpassword";
+          description = ''
+            A file containing the password corresponding to
+            {option}`database.user`.
+          '';
         };
       };
     };

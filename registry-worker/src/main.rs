@@ -21,8 +21,8 @@ async fn main() {
 
     let mut ctx = Context::new(conn);
 
-    // test_single(&mut ctx).await;
-    latest_nixpkgs(&mut ctx).await;
+    test_single(&mut ctx).await;
+    // latest_nixpkgs(&mut ctx).await;
 }
 
 async fn test_single(ctx: &mut Context) {
