@@ -9,7 +9,6 @@ let
   cfg = config.services.xinux-manager.registry-worker;
   system = pkgs.stdenv.hostPlatform.system;
   pkg = flake.packages.${system}.default;
-  databaseName = "xinux-registry";
   localDatabase = ((cfg.database.host == "127.0.0.1") || (cfg.database.host == "localhost"));
 
   config1 =
@@ -27,11 +26,11 @@ let
         enable = true;
         ensureUsers = [
           {
-            name = databaseName;
+            name = cfg.database.name;
             ensureDBOwnership = true;
           }
         ];
-        ensureDatabases = [ databaseName ];
+        ensureDatabases = [ cfg.database.name ];
       };
 
       systemd.services.xinux-manager-registry-worker = {
@@ -84,12 +83,12 @@ in
 
       user = mkOption {
         type = types.str;
-        default = databaseName;
+        default = "xinux-manager";
       };
 
       group = mkOption {
         type = types.str;
-        default = databaseName;
+        default = "xinux-manager";
       };
 
       package = mkOption {
