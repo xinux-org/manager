@@ -40,36 +40,84 @@ let
         documentation = [ "https://github.com/xinux-org/manager" ];
 
         after = [ "network-online.target" ] ++ lib.optional localDatabase "postgresql.service";
+        requires = lib.optional localDatabase "postgresql.service";
         wants = [ "network-online.target" ];
         wantedBy = [ "multi-user.target" ];
 
-        path = with pkgs; [
-          coreutils
-          replace-secret
-          diesel-cli
-          diesel-cli-ext
-        ];
+        path =
+          with pkgs;
+          [
+            coreutils
+            replace-secret
+            diesel-cli
+            diesel-cli-ext
+          ]
+          ++ [ cfg.package ];
 
         serviceConfig = {
           User = cfg.user;
           Group = cfg.group;
           Restart = "on-failure";
-          WorkingDirectory = "${cfg.dataDir}";
           ExecStartPre = ''
             ${lib.optionalString cfg.database.socketAuth ''
-              ${pkgs.coreutils}/bin/echo "DATABASE_URL=postgres://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.socket}" > "${cfg.dataDir}/.env"
+              echo "DATABASE_URL=postgres://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.socket}" > "${cfg.dataDir}/.env"
             ''}
 
             ${lib.optionalString (!cfg.database.socketAuth) ''
-              ${pkgs.coreutils}/bin/echo "DATABASE_URL=postgres://${cfg.database.user}:#password#@${cfg.database.host}/${cfg.database.name}" > "${cfg.dataDir}/.env"
-              ${pkgs.replace-secret}/bin/replace-secret '#password#' '${cfg.database.passwordFile}' '${cfg.dataDir}/.env'
+              echo "DATABASE_URL=postgres://${cfg.database.user}:#password#@${cfg.database.host}/${cfg.database.name}" > "${cfg.dataDir}/.env"
+              replace-secret '#password#' '${cfg.database.passwordFile}' '${cfg.dataDir}/.env'
             ''}
 
-            ${pkgs.diesel-cli}/bin/diesel migration run
+            diesel migration run
           '';
           ExecStart = "${lib.getBin cfg.package}/bin/registry-worker";
+          ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
           StateDirectory = cfg.user;
           StateDirectoryMode = "0750";
+          ReadWritePaths = [
+            cfg.dataDir
+            "/run/postgresql"
+          ];
+          CapabilityBoundingSet = [
+            "AF_NETLINK"
+            "AF_INET"
+            "AF_INET6"
+          ];
+          DeviceAllow = [ "/dev/stdin r" ];
+          DevicePolicy = "strict";
+          IPAddressAllow = "localhost";
+          LockPersonality = true;
+          NoNewPrivileges = true;
+          PrivateDevices = true;
+          PrivateTmp = true;
+          PrivateUsers = false;
+          ProtectClock = true;
+          ProtectControlGroups = true;
+          ProtectHome = true;
+          ProtectHostname = true;
+          ProtectKernelLogs = true;
+          ProtectKernelModules = true;
+          ProtectKernelTunables = true;
+          ProtectSystem = "strict";
+          ReadOnlyPaths = [ "/" ];
+          RemoveIPC = true;
+          RestrictAddressFamilies = [
+            "AF_NETLINK"
+            "AF_INET"
+            "AF_INET6"
+            "AF_UNIX"
+          ];
+          RestrictNamespaces = true;
+          RestrictRealtime = true;
+          RestrictSUIDSGID = true;
+          SystemCallArchitectures = "native";
+          SystemCallFilter = [
+            "@system-service"
+            "~@privileged"
+            "~@resources"
+            "@pkey"
+          ];
+          UMask = "0027";
         };
       };
     };
