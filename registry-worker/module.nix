@@ -57,8 +57,6 @@ let
           Restart = "on-failure";
           WorkingDirectory = "${cfg.dataDir}";
           ExecStartPre = ''
-            ${pkgs.coreutils}/bin/mkdir -p "${cfg.dataDir}"
-
             ${lib.optionalString cfg.database.socketAuth ''
               ${pkgs.coreutils}/bin/echo "DATABASE_URL=postgres://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.socket}" > "${cfg.dataDir}/.env"
             ''}
