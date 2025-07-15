@@ -68,7 +68,7 @@ let
               ${pkgs.replace-secret}/bin/replace-secret '#password#' '${cfg.database.passwordFile}' '${cfg.dataDir}/.env'
             ''}
 
-            ${diesel-cli}/bin/diesel migration run
+            ${pkgs.diesel-cli}/bin/diesel migration run
           '';
           ExecStart = "${lib.getBin cfg.package}/bin/registry-worker";
           StateDirectory = cfg.user;
