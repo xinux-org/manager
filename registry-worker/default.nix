@@ -38,4 +38,9 @@ pkgs.rustPlatform.buildRustPackage {
   );
 
   NIX_LDFLAGS = "-L${(getLibFolder pkgs.sqlite.dev)} -L${(getLibFolder pkgs.libpq)}";
+
+  fixupPhase = ''
+    mkdir -p $out/lib
+    cp -R ./migrations $out/lib
+  '';
 }
