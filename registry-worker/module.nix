@@ -57,18 +57,18 @@ let
           Restart = "on-failure";
           WorkingDirectory = "${cfg.dataDir}";
           ExecStartPre = ''
-            mkdir -p "${cfg.dataDir}"
+            ${pkgs.coreutils}/bin/mkdir -p "${cfg.dataDir}"
 
             ${lib.optionalString cfg.database.socketAuth ''
-              echo "DATABASE_URL=postgres://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.socket}" > "${cfg.dataDir}/.env"
+              ${pkgs.coreutils}/bin/echo "DATABASE_URL=postgres://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.socket}" > "${cfg.dataDir}/.env"
             ''}
 
             ${lib.optionalString (!cfg.database.socketAuth) ''
-              echo "DATABASE_URL=postgres://${cfg.database.user}:#password#@${cfg.database.host}/${cfg.database.name}" > "${cfg.dataDir}/.env"
-              replace-secret '#password#' '${cfg.database.passwordFile}' '${cfg.dataDir}/.env'
+              ${pkgs.coreutils}/bin/echo "DATABASE_URL=postgres://${cfg.database.user}:#password#@${cfg.database.host}/${cfg.database.name}" > "${cfg.dataDir}/.env"
+              ${pkgs.replace-secret}/bin/replace-secret '#password#' '${cfg.database.passwordFile}' '${cfg.dataDir}/.env'
             ''}
 
-            diesel migration run
+            ${diesel-cli}/bin/diesel migration run
           '';
           ExecStart = "${lib.getBin cfg.package}/bin/registry-worker";
           StateDirectory = cfg.user;
