@@ -58,7 +58,9 @@ let
           User = cfg.user;
           Group = cfg.group;
           Restart = "on-failure";
-          ExecStartPre = ''
+          ExecStartPre = pkgs.writeScript "xinux-manager-registry-worker-pre-start.sh" ''
+            #!${pkgs.runtimeShell}
+
             ${lib.optionalString cfg.database.socketAuth ''
               echo "DATABASE_URL=postgres://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.socket}" > "${cfg.dataDir}/.env"
             ''}
@@ -89,7 +91,7 @@ let
           LockPersonality = true;
           NoNewPrivileges = true;
           PrivateDevices = true;
-          PrivateTmp = true;
+          # PrivateTmp = true;
           PrivateUsers = false;
           ProtectClock = true;
           ProtectControlGroups = true;
