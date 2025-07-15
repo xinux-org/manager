@@ -85,41 +85,6 @@ let
             "AF_INET"
             "AF_INET6"
           ];
-          DeviceAllow = [ "/dev/stdin r" ];
-          DevicePolicy = "strict";
-          IPAddressAllow = "localhost";
-          LockPersonality = true;
-          NoNewPrivileges = true;
-          PrivateDevices = true;
-          # PrivateTmp = true;
-          PrivateUsers = false;
-          ProtectClock = true;
-          ProtectControlGroups = true;
-          ProtectHome = true;
-          ProtectHostname = true;
-          ProtectKernelLogs = true;
-          ProtectKernelModules = true;
-          ProtectKernelTunables = true;
-          ProtectSystem = "strict";
-          ReadOnlyPaths = [ "/" ];
-          RemoveIPC = true;
-          RestrictAddressFamilies = [
-            "AF_NETLINK"
-            "AF_INET"
-            "AF_INET6"
-            "AF_UNIX"
-          ];
-          RestrictNamespaces = true;
-          RestrictRealtime = true;
-          RestrictSUIDSGID = true;
-          SystemCallArchitectures = "native";
-          SystemCallFilter = [
-            "@system-service"
-            "~@privileged"
-            "~@resources"
-            "@pkey"
-          ];
-          UMask = "0027";
         };
       };
     };
