@@ -1,14 +1,14 @@
-flake:
 {
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }:
 let
   cfg = config.services.xinux-manager.registry-worker;
   system = pkgs.stdenv.hostPlatform.system;
-  pkg = flake.packages.${system}.default;
+  pkg = inputs.xinux-manager.packages.${system}.registry-worker;
   localDatabase = ((cfg.database.host == "127.0.0.1") || (cfg.database.host == "localhost"));
 
   config1 =
@@ -26,11 +26,21 @@ let
         enable = true;
         ensureUsers = [
           {
-            name = cfg.database.name;
+            name = cfg.database.user;
             ensureDBOwnership = true;
           }
         ];
         ensureDatabases = [ cfg.database.name ];
+
+        identMap = ''
+          # mapping name       system user database user
+          ${cfg.database.user} ${cfg.user} ${cfg.database.user}
+        '';
+
+        authentication = pkgs.lib.mkAfter ''
+          # scope database name        database user        method mapping name
+            local ${cfg.database.name} ${cfg.database.user} peer   map=${cfg.database.user}
+        '';
       };
 
       systemd.services.xinux-manager-registry-worker = {
@@ -62,29 +72,21 @@ let
             #!${pkgs.runtimeShell}
 
             ${lib.optionalString cfg.database.socketAuth ''
-              echo "DATABASE_URL=postgres://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.socket}" > "${cfg.dataDir}/.env"
+              echo "DATABASE_URL=postgres://${cfg.database.user}/${cfg.database.name}?host=${cfg.database.socket}" > /var/lib/${cfg.dataDir}/.env
             ''}
-
             ${lib.optionalString (!cfg.database.socketAuth) ''
-              echo "DATABASE_URL=postgres://${cfg.database.user}:#password#@${cfg.database.host}/${cfg.database.name}" > "${cfg.dataDir}/.env"
-              replace-secret '#password#' '${cfg.database.passwordFile}' '${cfg.dataDir}/.env'
+              echo "DATABASE_URL=postgres://${cfg.database.user}:#password#@${cfg.database.host}/${cfg.database.name}" > /var/lib/${cfg.dataDir}/.env
+              replace-secret "#password#" ${cfg.database.passwordFile} /var/lib/${cfg.dataDir}/.env
             ''}
 
-            diesel migration run
+            source /var/lib/${cfg.dataDir}/.env
+            diesel migration run --migration-dir "${pkg}/lib/migrations"
           '';
-          ExecStart = "${lib.getBin cfg.package}/bin/registry-worker";
-          ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
-          StateDirectory = cfg.user;
+          StateDirectory = "${cfg.dataDir}";
           StateDirectoryMode = "0750";
-          ReadWritePaths = [
-            cfg.dataDir
-            "/run/postgresql"
-          ];
-          CapabilityBoundingSet = [
-            "AF_NETLINK"
-            "AF_INET"
-            "AF_INET6"
-          ];
+          WorkingDirectory = "/var/lib/${cfg.dataDir}";
+          ExecStart = "${cfg.package}/bin/registry-worker";
+          ExecReload = "${pkgs.coreutils}/bin/kill -s HUP $MAINPID";
         };
       };
     };
@@ -113,7 +115,7 @@ in
 
       dataDir = mkOption {
         type = types.str;
-        default = "/var/lib/xinux-manager/regstiry-worker";
+        default = "xinux-manager/registry-worker";
       };
 
       database = {
@@ -157,7 +159,7 @@ in
         passwordFile = mkOption {
           type = types.nullOr types.path;
           default = null;
-          example = "/run/keys/${manifest-name}-dbpassword";
+          example = "/run/keys/your-dbpassword";
           description = ''
             A file containing the password corresponding to
             {option}`database.user`.
