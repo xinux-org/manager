@@ -72,7 +72,7 @@ let
             #!${pkgs.runtimeShell}
 
             ${lib.optionalString cfg.database.socketAuth ''
-              echo "DATABASE_URL=postgres://${cfg.database.user}/${cfg.database.name}?host=${cfg.database.socket}" > /var/lib/${cfg.dataDir}/.env
+              echo "DATABASE_URL=postgres://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.socket}" > /var/lib/${cfg.dataDir}/.env
             ''}
             ${lib.optionalString (!cfg.database.socketAuth) ''
               echo "DATABASE_URL=postgres://${cfg.database.user}:#password#@${cfg.database.host}/${cfg.database.name}" > /var/lib/${cfg.dataDir}/.env
