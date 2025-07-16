@@ -1,14 +1,14 @@
+flake:
 {
   config,
   lib,
   pkgs,
-  inputs,
   ...
 }:
 let
   cfg = config.services.xinux-manager.registry-worker;
   system = pkgs.stdenv.hostPlatform.system;
-  pkg = inputs.xinux-manager.packages.${system}.registry-worker;
+  pkg = flake.packages.${system}.default;
   localDatabase = ((cfg.database.host == "127.0.0.1") || (cfg.database.host == "localhost"));
 
   config1 =
