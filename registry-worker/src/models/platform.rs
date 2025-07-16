@@ -1,6 +1,11 @@
-use crate::schema::*;
+use crate::{
+    schema::*,
+    types::{AsyncPool, ProcessError, ProcessResult},
+};
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use moka::sync::Cache;
+use tokio_util::either::Either;
 
 #[derive(Queryable, Selectable, Identifiable, Debug, PartialEq, Clone)]
 #[diesel(table_name = platforms)]
@@ -16,40 +21,58 @@ pub struct NewPlatform<'a> {
 }
 
 impl Platform {
-    pub fn find_by_name(conn: &mut PgConnection, name: &str) -> QueryResult<Self> {
+    pub async fn find_by_name(pool: AsyncPool, name: &str) -> ProcessResult<Self> {
         use crate::schema::platforms::dsl;
+        let mut conn = pool.get().await?;
 
         dsl::platforms
             .filter(dsl::name.eq(name))
             .limit(1)
             .select(Self::as_select())
-            .first(conn)
+            .first(&mut conn)
+            .await
+            .map_err(ProcessError::DieselError)
     }
 
-    pub fn create(conn: &mut PgConnection, name: &str) -> QueryResult<Self> {
+    pub async fn create(pool: AsyncPool, name: &str) -> ProcessResult<Self> {
+        let mut conn = pool.get().await?;
         let new_row = NewPlatform { name };
 
         diesel::insert_into(platforms::table)
             .values(&new_row)
             .returning(Self::as_returning())
-            .get_result(conn)
+            .get_result(&mut conn)
+            .await
+            .map_err(ProcessError::DieselError)
     }
 
-    pub fn cached_get_or_create(
-        conn: &mut PgConnection,
+    pub async fn cached_get_or_create(
+        pool: AsyncPool,
         cache: &mut Cache<String, Self>,
         name: &str,
-    ) -> QueryResult<Self> {
+    ) -> ProcessResult<Self> {
         cache
             .get(name)
-            .ok_or(diesel::result::Error::NotFound)
-            .or_else(|_| {
-                Self::find_by_name(conn, name)
-                    .or_else(|_| Self::create(conn, name))
-                    .and_then(|platform| {
-                        cache.insert(name.to_string(), platform);
-                        cache.get(name).ok_or(diesel::result::Error::NotFound)
+            .map_or_else(
+                || {
+                    Either::Left(async {
+                        Self::find_by_name(pool.clone(), name)
+                            .await
+                            .map_or_else(
+                                |_| Either::Left(async { Self::create(pool, name).await }),
+                                |v| Either::Right(async { Ok(v) }),
+                            )
+                            .await
+                            .and_then(|platform| {
+                                cache.insert(name.to_string(), platform);
+                                cache.get(name).ok_or(ProcessError::DieselError(
+                                    diesel::result::Error::NotFound,
+                                ))
+                            })
                     })
-            })
+                },
+                |v| Either::Right(async { Ok(v) }),
+            )
+            .await
     }
 }

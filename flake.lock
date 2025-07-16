@@ -74,34 +74,13 @@
       "inputs": {
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
-        "registry-worker": "registry-worker",
-        "rust-overlay": "rust-overlay_2"
+        "registry-worker": "registry-worker"
       }
     },
     "rust-overlay": {
       "inputs": {
         "nixpkgs": [
           "registry-worker",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1751338093,
-        "narHash": "sha256-/yd9nPcTfUZPFtwjRbdB5yGLdt3LTPqz6Ja63Joiahs=",
-        "owner": "oxalica",
-        "repo": "rust-overlay",
-        "rev": "6cfb7821732dac2d3e2dea857a5613d3b856c20c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "oxalica",
-        "repo": "rust-overlay",
-        "type": "github"
-      }
-    },
-    "rust-overlay_2": {
-      "inputs": {
-        "nixpkgs": [
           "nixpkgs"
         ]
       },

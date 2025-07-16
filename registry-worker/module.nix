@@ -32,13 +32,15 @@ let
         ];
         ensureDatabases = [ cfg.database.name ];
 
+        # https://www.postgresql.org/docs/current/auth-username-maps.html
         identMap = ''
           # mapping name       system user database user
           ${cfg.database.user} ${cfg.user} ${cfg.database.user}
         '';
 
+        # https://www.postgresql.org/docs/current/auth-pg-hba-conf.html
         authentication = pkgs.lib.mkAfter ''
-          # scope database name        database user        method mapping name
+          # type  database name        database user        method mapping name
             local ${cfg.database.name} ${cfg.database.user} peer   map=${cfg.database.user}
         '';
       };

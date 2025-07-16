@@ -1,8 +1,10 @@
 use crate::{
     models::{GitHostSource, GitSource, NixpkgsSource, package_version::PackageVersion},
     schema::*,
+    types::{AsyncPool, ProcessError, ProcessResult},
 };
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 
 use super::Source;
 
@@ -21,11 +23,12 @@ pub struct PackageVersionSource {
 }
 
 impl PackageVersionSource {
-    pub(crate) fn create(
-        conn: &mut PgConnection,
+    pub async fn create(
+        pool: AsyncPool,
         package_version: &PackageVersion,
         source: &Source,
-    ) -> QueryResult<Self> {
+    ) -> ProcessResult<Self> {
+        let mut conn = pool.get().await?;
         let new_row = NewPackageVersionSource {
             package_version_id: package_version.id,
             ..Default::default()
@@ -35,7 +38,9 @@ impl PackageVersionSource {
         diesel::insert_into(package_versions_sources::table)
             .values(&new_row)
             .returning(Self::as_returning())
-            .get_result(conn)
+            .get_result(&mut conn)
+            .await
+            .map_err(ProcessError::DieselError)
     }
 }
 

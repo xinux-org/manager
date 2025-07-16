@@ -1,9 +1,10 @@
 use crate::{
     models::{license::License, package::Package},
     schema::*,
+    types::{AsyncPool, ProcessError, ProcessResult},
 };
 use diesel::prelude::*;
-use flake_info::data::Derivation;
+use diesel_async::RunQueryDsl;
 
 #[derive(Queryable, Identifiable, Selectable, Associations, Debug, PartialEq)]
 #[diesel(belongs_to(Package))]
@@ -33,41 +34,40 @@ pub struct NewPackageVersion<'a> {
 }
 
 impl PackageVersion {
-    pub fn find_by_package_and_version(
-        conn: &mut PgConnection,
+    pub async fn find_by_package_and_version(
+        pool: AsyncPool,
         package_id: i32,
         version: &str,
-    ) -> QueryResult<Self> {
+    ) -> ProcessResult<Self> {
         use crate::schema::package_versions::dsl;
+        let mut conn = pool.get().await?;
 
         dsl::package_versions
             .filter(dsl::package_id.eq(package_id).and(dsl::version.eq(version)))
             .limit(1)
             .select(Self::as_select())
-            .first(conn)
+            .first(&mut conn)
+            .await
+            .map_err(ProcessError::DieselError)
     }
 
-    pub fn create_from(
-        conn: &mut PgConnection,
-        package: &Package,
-        derivation: &Derivation,
-    ) -> QueryResult<Self> {
-        if let Derivation::Package {
-            package_pversion, ..
-        } = derivation
-        {
-            let new_row = NewPackageVersion {
-                package_id: package.id,
-                version: package_pversion,
-                ..Default::default()
-            };
+    pub async fn create_from(
+        pool: AsyncPool,
+        package_id: i32,
+        version: &String,
+    ) -> ProcessResult<Self> {
+        let mut conn = pool.get().await?;
+        let new_row = NewPackageVersion {
+            package_id,
+            version,
+            ..Default::default()
+        };
 
-            diesel::insert_into(package_versions::table)
-                .values(&new_row)
-                .returning(Self::as_returning())
-                .get_result(conn)
-        } else {
-            unreachable!("package version derivation must be a package!")
-        }
+        diesel::insert_into(package_versions::table)
+            .values(&new_row)
+            .returning(Self::as_returning())
+            .get_result(&mut conn)
+            .await
+            .map_err(ProcessError::DieselError)
     }
 }

@@ -1,7 +1,7 @@
 use crate::schema::*;
 use diesel::prelude::*;
 
-#[derive(Queryable, Selectable, Identifiable, Debug, PartialEq)]
+#[derive(Queryable, Selectable, Identifiable, Debug, PartialEq, Clone)]
 #[diesel(table_name = git_host_sources)]
 pub struct GitHostSource {
     pub id: i32,

@@ -162,9 +162,9 @@ type LazyExports = Box<dyn FnOnce() -> Result<Vec<Export>, FlakeInfoError>>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    env_logger::init();
+    // env_logger::init();
 
-    let args = Args::from_args();
+    // let args = Args::from_args();
 
     // anyhow::ensure!(
     //     args.elastic.enable || args.elastic.json,
@@ -178,7 +178,8 @@ async fn main() -> Result<()> {
     // } else if args.elastic.json {
     //     println!("{}", serde_json::to_string(&exports()?)?);
     // }
-    // Ok(())
+
+    Ok(())
 }
 
 #[derive(Debug, Error)]

@@ -1,8 +1,10 @@
 use crate::{
     models::{package_version::PackageVersion, platform::Platform},
     schema::*,
+    types::{AsyncPool, ProcessError, ProcessResult},
 };
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 
 #[derive(Queryable, Selectable, Associations, Identifiable, Debug, PartialEq)]
 #[diesel(belongs_to(PackageVersion))]
@@ -22,11 +24,12 @@ pub struct NewPackageVersionPlatform {
 }
 
 impl PackageVersionPlatform {
-    pub fn create_all_only(
-        conn: &mut PgConnection,
+    pub async fn create_all_only(
+        pool: AsyncPool,
         package_version: &PackageVersion,
         platforms: &[Platform],
-    ) -> QueryResult<()> {
+    ) -> ProcessResult<()> {
+        let mut conn = pool.get().await?;
         diesel::insert_into(package_versions_platforms::table)
             .values(
                 platforms
@@ -37,7 +40,9 @@ impl PackageVersionPlatform {
                     })
                     .collect::<Vec<_>>(),
             )
-            .execute(conn)
+            .execute(&mut conn)
+            .await
             .map(|_| ())
+            .map_err(ProcessError::DieselError)
     }
 }

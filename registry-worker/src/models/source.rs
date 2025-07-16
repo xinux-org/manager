@@ -1,7 +1,8 @@
-use diesel::{PgConnection, QueryResult};
+use crate::types::{AsyncPool, ProcessResult};
 
 use super::{GitHostSource, GitSource, NixpkgsSource};
 
+#[derive(Clone, Debug)]
 pub enum Source {
     Nixpkgs(NixpkgsSource),
     GitHost(GitHostSource),
@@ -15,9 +16,9 @@ impl Source {
         }
     }
 
-    pub fn set_processed(&self, conn: &mut PgConnection, processed: bool) -> QueryResult<()> {
+    pub async fn set_processed(self, pool: AsyncPool, processed: bool) -> ProcessResult<()> {
         match self {
-            Self::Nixpkgs(nixpkgs) => nixpkgs.update_processed(conn, processed),
+            Self::Nixpkgs(nixpkgs) => nixpkgs.update_processed(pool, processed).await,
             _ => Ok(()),
         }
     }
