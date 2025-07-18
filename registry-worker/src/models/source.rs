@@ -1,25 +1,17 @@
-use crate::types::{AsyncPool, ProcessResult};
+use crate::{
+    models::NewPackageVersionSource,
+    types::{AsyncPool, ProcessResult},
+};
 
-use super::{GitHostSource, GitSource, NixpkgsSource};
-
-#[derive(Clone, Debug)]
-pub enum Source {
-    Nixpkgs(NixpkgsSource),
-    GitHost(GitHostSource),
-    Git(GitSource),
-}
-impl Source {
-    pub fn is_processed(&self) -> bool {
-        match self {
-            Self::Nixpkgs(nixpkgs) => nixpkgs.processed,
-            _ => false,
-        }
-    }
-
-    pub async fn set_processed(self, pool: AsyncPool, processed: bool) -> ProcessResult<()> {
-        match self {
-            Self::Nixpkgs(nixpkgs) => nixpkgs.update_processed(pool, processed).await,
-            _ => Ok(()),
-        }
-    }
+pub trait Source {
+    fn is_processed(&self) -> bool;
+    fn set_processed(
+        &self,
+        pool: AsyncPool,
+        processed: bool,
+    ) -> impl std::future::Future<Output = ProcessResult<()>> + Send;
+    fn update_package_version_source_id(
+        &self,
+        package_version_source: &mut NewPackageVersionSource,
+    );
 }

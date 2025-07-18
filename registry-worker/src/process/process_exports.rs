@@ -8,11 +8,14 @@ use crate::{
     types::{AsyncPool, ProcessError, ProcessResult},
 };
 
-pub async fn process_exports(
+pub async fn process_exports<S>(
     pool: AsyncPool,
-    source: Source,
+    source: S,
     exports: Vec<flake_info::data::Export>,
-) -> Vec<ProcessResult<()>> {
+) -> Vec<ProcessResult<()>>
+where
+    S: Source + Clone + std::marker::Send + 'static,
+{
     // let platforms_cache: Cache<String, Platform> = Cache::new(100);
     let mut set = JoinSet::new();
 
@@ -29,7 +32,7 @@ pub async fn process_exports(
                     ref package_homepage,
                     ..
                 } => {
-        println!("Processing {}-{}", &package_pname, &package_pversion);
+                    println!("Processing {}-{}", &package_pname, &package_pversion);
                     Package::find_by_name(pool.clone(), &package_pname)
                         .await
                         .map_or_else(
@@ -91,10 +94,11 @@ pub async fn process_exports(
                                                     |_| Either::Left(async {}),
                                                     |package_version| {
                                                         Either::Right(async move {
+                                                            let source = source.clone();
                                                             let _ = PackageVersionSource::create(
                                                                 pool.clone(),
                                                                 &package_version,
-                                                                &source,
+                                                                source,
                                                             )
                                                             .await;
 

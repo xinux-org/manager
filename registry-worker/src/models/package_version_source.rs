@@ -26,14 +26,14 @@ impl PackageVersionSource {
     pub async fn create(
         pool: AsyncPool,
         package_version: &PackageVersion,
-        source: &Source,
+        source: impl Source,
     ) -> ProcessResult<Self> {
         let mut conn = pool.get().await?;
-        let new_row = NewPackageVersionSource {
+        let mut new_row = NewPackageVersionSource {
             package_version_id: package_version.id,
             ..Default::default()
-        }
-        .apply_source(source);
+        };
+        source.update_package_version_source_id(&mut new_row);
 
         diesel::insert_into(package_versions_sources::table)
             .values(&new_row)
@@ -51,16 +51,4 @@ pub struct NewPackageVersionSource {
     pub nixpkgs_source_id: Option<i32>,
     pub git_host_source_id: Option<i32>,
     pub git_source_id: Option<i32>,
-}
-
-impl NewPackageVersionSource {
-    pub fn apply_source(mut self, source: &Source) -> Self {
-        match source {
-            Source::Nixpkgs(nixpkgs) => self.nixpkgs_source_id = Some(nixpkgs.id),
-            Source::GitHost(git_host) => self.git_host_source_id = Some(git_host.id),
-            Source::Git(git) => self.git_source_id = Some(git.id),
-        }
-
-        self
-    }
 }
