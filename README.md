@@ -47,4 +47,27 @@ In order to accomplish our goals we need to work on following paths:
 - [ ] Ability to monitor and process latest nixpkgs channels/revisions
 - [ ] Ability to peek historical versions/channels
 
-.
+## diesel guide:
+
+### If you updated schema.rs
+
+- `diesel migration generate --diff-schema <migration_name>`
+
+### If you want to create migration from scratch
+
+- `diesel migration generate <migration_name>`
+- do reviews
+
+### Reviewing freshly created migration(s)
+
+- review `up.sql` and `down.sql`
+   - if you create a new table or delete existing, make shure that `"id" SERIAL PRIMARY KEY` is proprely setted up
+   - make shure that you setted up `FOREIGN KEY` and `UNIQUE` constraints properly
+- try to fill a database with some data
+- make shure that all tables have some data
+- try to run `diesel migration run` in order to apply `up.sql`
+- try to run `diesel migration revert` in order to apply `down.sql`
+
+### When pulled latest commits from git
+
+- run `diesel migration run`

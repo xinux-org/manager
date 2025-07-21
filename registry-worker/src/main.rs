@@ -3,7 +3,13 @@ use std::{env, sync::Arc, time::Duration};
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use dotenvy::dotenv;
 
-use crate::{logger::SimpleLogger, process::process_nixpkgs_commits::process_nixpkgs_commits};
+use crate::{
+    logger::SimpleLogger,
+    process::{
+        process_nixpkgs_branches::process_nixpkgs_branches,
+        process_nixpkgs_commits::process_nixpkgs_commits,
+    },
+};
 
 mod libs;
 mod logger;
@@ -42,28 +48,32 @@ async fn main() {
     tokio::join!(
         async move {
             loop {
-                log::info!(target: "nixos-branches", "Updating all nixos branches");
+                log::info!("nixpkgs-branches: updating");
 
-                // match process_nixpkgs_branches(pool.clone(), oc.clone()).await {
-                //     Ok(_) => {
-                //         println!("N")
-                //     }
-                //     Err(err) => {
-                //         println!("Error occurred while updating all nixos branches {:?}", err)
-                //     }
-                // };
+                match process_nixpkgs_branches(pool.clone(), oc.clone()).await {
+                    Ok(_) => {
+                        log::info!("nixpkgs-branches: all branches updated");
+                    }
+                    Err(err) => {
+                        log::error!("nixpkgs-branches: {:?}", err);
+                    }
+                };
 
                 // once a day
                 tokio::time::sleep(Duration::from_secs(60 * 60 * 24)).await;
             }
-            // test_single(pool.clone()).await;
-            // latest_nixpkgs(pool.clone()).await;
         },
         async move {
             loop {
-                log::info!(target: "nixos-commits", "Updating all nixos commits");
-                println!("Updating nixos stable commits");
-                process_nixpkgs_commits().await;
+                log::info!("nixpkgs-commits: updating");
+                match process_nixpkgs_commits().await {
+                    Ok(_) => {
+                        log::info!("nixpkgs-commits: all branch commits updated");
+                    }
+                    Err(err) => {
+                        log::error!("nixpkgs-commits: {:?}", err);
+                    }
+                };
 
                 // once in an hour
                 tokio::time::sleep(Duration::from_secs(60 * 60)).await;
