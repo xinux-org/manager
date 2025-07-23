@@ -4,6 +4,7 @@ use crate::{
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use futures::future::Either;
 
 #[derive(Queryable, Selectable, Identifiable, Debug, PartialEq, Clone)]
 #[diesel(table_name = packages)]
@@ -18,11 +19,26 @@ pub struct Package {
 #[diesel(table_name = packages)]
 pub struct NewPackage<'a> {
     pub name: &'a str,
-    pub description: Option<String>,
-    pub homepage: Option<String>,
+    pub description: Option<&'a str>,
+    pub homepage: Option<&'a str>,
 }
 
 impl Package {
+    pub async fn find_or_create(
+        pool: AsyncPool,
+        name: &str,
+        description: Option<&str>,
+        homepage: Option<&str>,
+    ) -> ProcessResult<Self> {
+        Self::find_by_name(pool.clone(), name)
+            .await
+            .map_or_else(
+                |_| Either::Left(async { Self::create(pool, name, description, homepage).await }),
+                |v| Either::Right(async { Ok(v) }),
+            )
+            .await
+    }
+
     pub async fn find_by_name(pool: AsyncPool, name: &str) -> ProcessResult<Self> {
         use crate::schema::packages::dsl;
         let mut conn = pool.get().await?;
@@ -39,8 +55,8 @@ impl Package {
     pub async fn create(
         pool: AsyncPool,
         name: &str,
-        description: Option<String>,
-        homepage: Option<String>,
+        description: Option<&str>,
+        homepage: Option<&str>,
     ) -> ProcessResult<Self> {
         let mut conn = pool.get().await?;
         let new_row = NewPackage {

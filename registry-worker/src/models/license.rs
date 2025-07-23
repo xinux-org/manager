@@ -4,7 +4,7 @@ use crate::{
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use flake_info::data::export::{License as FlakeLicense};
+use flake_info::data::export::License as FlakeLicense;
 
 #[derive(Queryable, Selectable, Identifiable, Debug, PartialEq)]
 #[diesel(table_name = licenses)]
@@ -12,11 +12,6 @@ pub struct License {
     pub id: i32,
     pub fullname: String,
     pub url: Option<String>,
-    /*pub license: Option<String>, 
-      pub shortname: Option<String>,
-      pub name: String,
-    */
-    
 }
 
 #[derive(Insertable)]
@@ -24,11 +19,6 @@ pub struct License {
 pub struct NewLicense<'a> {
     pub fullname: &'a str,
     pub url: Option<&'a str>,
-    /*
-      pub shortname: Option<&'a str>,
-      pub name: &'a str,
-      pub license: Option<&'a str>,
-    */
 }
 
 impl License {
@@ -46,13 +36,10 @@ impl License {
             .map_err(ProcessError::DieselError)
     }
 
-    pub async fn create(
-        pool: AsyncPool,
-        license: FlakeLicense
-    ) -> ProcessResult<Self> {
+    pub async fn create(pool: AsyncPool, license: FlakeLicense) -> ProcessResult<Self> {
         let mut conn = pool.get().await?;
         let new_row = NewLicense {
-            fullname: &license.fullName.as_ref(),
+            fullname: &license.fullName,
             url: license.url.as_deref(),
         };
 

@@ -2,14 +2,13 @@ use chrono::{DateTime, Days, Months, Utc};
 use futures_util::StreamExt;
 use itertools::Itertools;
 use std::sync::Arc;
-use tokio_util::either::Either;
 
 use octocrab::Octocrab;
 use tokio::task::JoinSet;
 
 use crate::{
-    models::{NixpkgsChannel, NixpkgsChannelSource, NixpkgsSource},
-    types::{AsyncPool, ProcessError, ProcessResult},
+    models::NixpkgsChannel,
+    types::{AsyncPool, ProcessResult},
 };
 
 pub async fn process_nixpkgs_commits(pool: AsyncPool, oc: Arc<Octocrab>) -> ProcessResult<()> {

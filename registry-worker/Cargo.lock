@@ -1861,7 +1861,6 @@ dependencies = [
  "moka",
  "octocrab",
  "tokio",
- "tokio-util",
 ]
 
 [[package]]

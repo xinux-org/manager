@@ -1,5 +1,5 @@
 use chrono::Utc;
-use tokio_util::either::Either;
+use futures::future::Either;
 
 use crate::{
     models::{NixpkgsSource, Source},

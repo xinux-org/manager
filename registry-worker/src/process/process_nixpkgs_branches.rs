@@ -1,12 +1,12 @@
+use futures::future::Either;
 use futures_util::stream::StreamExt;
 use std::sync::Arc;
 
 use octocrab::Octocrab;
 use tokio::task::JoinSet;
-use tokio_util::either::Either;
 
 use crate::{
-    models::{NixpkgsChannel, NixpkgsChannelSource},
+    models::NixpkgsChannel,
     types::{AsyncPool, ProcessError, ProcessResult},
 };
 

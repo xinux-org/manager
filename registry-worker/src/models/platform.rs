@@ -4,8 +4,8 @@ use crate::{
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use futures::future::Either;
 use moka::sync::Cache;
-use tokio_util::either::Either;
 
 #[derive(Queryable, Selectable, Identifiable, Debug, PartialEq, Clone)]
 #[diesel(table_name = platforms)]

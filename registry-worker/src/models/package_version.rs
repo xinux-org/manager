@@ -5,6 +5,7 @@ use crate::{
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use futures::future::Either;
 
 #[derive(Queryable, Identifiable, Selectable, Associations, Debug, PartialEq)]
 #[diesel(belongs_to(Package))]
@@ -34,6 +35,20 @@ pub struct NewPackageVersion<'a> {
 }
 
 impl PackageVersion {
+    pub async fn find_or_create(
+        pool: AsyncPool,
+        package_id: i32,
+        version: &str,
+    ) -> ProcessResult<Self> {
+        Self::find_by_package_and_version(pool.clone(), package_id, version)
+            .await
+            .map_or_else(
+                |_| Either::Left(async { Self::create(pool, package_id, version).await }),
+                |v| Either::Right(async { Ok(v) }),
+            )
+            .await
+    }
+
     pub async fn find_by_package_and_version(
         pool: AsyncPool,
         package_id: i32,
@@ -51,11 +66,7 @@ impl PackageVersion {
             .map_err(ProcessError::DieselError)
     }
 
-    pub async fn create_from(
-        pool: AsyncPool,
-        package_id: i32,
-        version: &String,
-    ) -> ProcessResult<Self> {
+    pub async fn create(pool: AsyncPool, package_id: i32, version: &str) -> ProcessResult<Self> {
         let mut conn = pool.get().await?;
         let new_row = NewPackageVersion {
             package_id,

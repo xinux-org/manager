@@ -79,6 +79,9 @@ diesel::table! {
         version -> Varchar,
         license_id -> Nullable<Int4>,
         changelog -> Nullable<Varchar>,
+        nixpkgs_source_id -> Nullable<Int4>,
+        git_source_id -> Nullable<Int4>,
+        git_host_source_id -> Nullable<Int4>,
         created_at -> Timestamp,
     }
 }
