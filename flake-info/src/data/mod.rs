@@ -1,4 +1,4 @@
-mod export;
+pub mod export;
 mod flake;
 pub mod import;
 mod pandoc;

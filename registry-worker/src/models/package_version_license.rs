@@ -1,5 +1,5 @@
 use crate::{
-    models::{maintainer::Maintainer, package_version::PackageVersion},
+    models::{license::License, package_version::PackageVersion},
     schema::*,
     types::{AsyncPool, ProcessError, ProcessResult},
 };
@@ -8,34 +8,34 @@ use diesel_async::RunQueryDsl;
 
 #[derive(Queryable, Selectable, Associations, Identifiable, Debug, PartialEq)]
 #[diesel(belongs_to(PackageVersion))]
-#[diesel(belongs_to(Maintainer))]
-#[diesel(table_name = package_versions_maintainers)]
-pub struct PackageVersionMaintainer {
+#[diesel(belongs_to(License))]
+#[diesel(table_name = package_versions_licenses)]
+pub struct PackageVersionLicense {
     pub id: i32,
     pub package_version_id: i32,
-    pub maintainer_id: i32,
+    pub license_id: i32,
 }
 
 #[derive(Insertable)]
-#[diesel(table_name = package_versions_maintainers)]
-pub struct NewPackageVersionMaintainer {
+#[diesel(table_name = package_versions_licenses)]
+pub struct NewPackageVersionLicense {
     pub package_version_id: i32,
-    pub maintainer_id: i32,
+    pub license_id: i32,
 }
 
-impl PackageVersionMaintainer {
+impl PackageVersionLicense {
     pub async fn create_all_only(
         pool: AsyncPool,
         package_version: &PackageVersion,
-        maintainers: &[Maintainer],
+        licenses: &[License],
     ) -> ProcessResult<()> {
         let mut conn = pool.get().await?;
-        diesel::insert_into(package_versions_maintainers::table)
+        diesel::insert_into(package_versions_licenses::table)
             .values(
-                maintainers
+                licenses
                     .iter()
-                    .map(|maintainer| NewPackageVersionMaintainer {
-                        maintainer_id: maintainer.id,
+                    .map(|licence| NewPackageVersionLicense {
+                        license_id: licence.id,
                         package_version_id: package_version.id,
                     })
                     .collect::<Vec<_>>(),

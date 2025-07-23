@@ -1,13 +1,66 @@
-use crate::schema::*;
+use crate::{
+    schema::*,
+    types::{AsyncPool, ProcessError, ProcessResult},
+};
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
+use flake_info::data::export::{License as FlakeLicense};
 
 #[derive(Queryable, Selectable, Identifiable, Debug, PartialEq)]
 #[diesel(table_name = licenses)]
 pub struct License {
     pub id: i32,
-    pub name: String,
-    pub license: Option<String>,
-    pub fullname: Option<String>,
-    pub shortname: Option<String>,
+    pub fullname: String,
     pub url: Option<String>,
+    /*pub license: Option<String>, 
+      pub shortname: Option<String>,
+      pub name: String,
+    */
+    
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = licenses)]
+pub struct NewLicense<'a> {
+    pub fullname: &'a str,
+    pub url: Option<&'a str>,
+    /*
+      pub shortname: Option<&'a str>,
+      pub name: &'a str,
+      pub license: Option<&'a str>,
+    */
+}
+
+impl License {
+    pub async fn find_by_name(pool: AsyncPool, license: FlakeLicense) -> ProcessResult<Self> {
+        use crate::schema::licenses::dsl;
+
+        let mut conn = pool.get().await?;
+
+        dsl::licenses
+            .filter(dsl::fullname.eq(&license.fullName))
+            .limit(1)
+            .select(Self::as_select())
+            .first(&mut conn)
+            .await
+            .map_err(ProcessError::DieselError)
+    }
+
+    pub async fn create(
+        pool: AsyncPool,
+        license: FlakeLicense
+    ) -> ProcessResult<Self> {
+        let mut conn = pool.get().await?;
+        let new_row = NewLicense {
+            fullname: &license.fullName.as_ref(),
+            url: license.url.as_deref(),
+        };
+
+        diesel::insert_into(licenses::table)
+            .values(&new_row)
+            .returning(Self::as_returning())
+            .get_result(&mut conn)
+            .await
+            .map_err(ProcessError::DieselError)
+    }
 }

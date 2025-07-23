@@ -20,8 +20,8 @@ type Flake = super::Flake;
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct License {
-    url: Option<String>,
-    fullName: String,
+    pub url: Option<String>,
+    pub fullName: String,
 }
 
 impl From<import::License> for License {
@@ -304,9 +304,9 @@ impl TryFrom<import::NixOption> for Derivation {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Maintainer {
-    name: Option<String>,
-    github: Option<String>,
-    email: Option<String>,
+    pub name: Option<String>,
+    pub github: Option<String>,
+    pub email: Option<String>,
 }
 
 impl From<import::Maintainer> for Maintainer {

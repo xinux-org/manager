@@ -3,9 +3,9 @@ use tokio_util::either::Either;
 
 use crate::{
     models::{
-        Package, PackageVersion, PackageVersionPlatform, PackageVersionSource, Platform, Source,
-    },
-    types::{AsyncPool, ProcessError, ProcessResult},
+        License, Maintainer, Package, PackageVersion, PackageVersionMaintainer,
+        PackageVersionPlatform, PackageVersionSource, Platform, Source,
+    }, types::{AsyncPool, ProcessError, ProcessResult}
 };
 
 pub async fn process_exports<S>(
@@ -26,8 +26,10 @@ where
             match export.item {
                 flake_info::data::Derivation::Package {
                     package_pname,
+                    package_license,
                     package_pversion,
                     package_platforms,
+                    package_maintainers,
                     ref package_description,
                     ref package_homepage,
                     ..
@@ -77,7 +79,65 @@ where
                                                     });
                                                 });
 
+                                                let mut set_for_licenses = JoinSet::new();
+                                                package_license.into_iter().for_each(|license| {
+                                                    let pool = pool.clone();
+                                                    println!("Inside the License");
+
+                                                    set_for_licenses.spawn(async move {
+                                                        License::find_by_name(
+                                                        pool.clone(),
+                                                        license.clone()
+
+                                                    )
+                                                            .await
+                                                            .map_or_else(
+                                                                |_| Either::Left(async { License::create(pool, license).await }),
+                                                                |v| Either::Right(async { Ok(v) }),
+                                                            )
+                                                            .await
+                                                    });
+                                                });
+
+                                                let mut set_for_maintainers = JoinSet::new();
+                                                package_maintainers.into_iter().for_each(|maintainer| {
+                                                    let pool = pool.clone();
+                                                    println!("Insite the Maintainer");
+                                                    set_for_maintainers.spawn(async move {
+                                                        Maintainer::find_by_maintainer(
+                                                            pool.clone(),
+                                                            maintainer.clone()
+                                                            // added clone
+                                                        )
+                                                            .await
+                                                            .map_or_else(
+                                                                |_|Either::Left(async {
+                                                                    Maintainer::create(
+                                                                        pool.clone(),
+                                                                        maintainer
+                                                                    ).await
+                                                                }),
+                                                                |v| Either::Right(async { Ok(v) }),
+                                                            )
+                                                            .await
+                                                    });
+                                                });
+
                                                 let platforms = set
+                                                    .join_all()
+                                                    .await
+                                                    .into_iter()
+                                                    .filter_map(|r| r.ok())
+                                                    .collect::<Vec<_>>();
+
+                                                let maintainers = set_for_maintainers
+                                                    .join_all()
+                                                    .await
+                                                    .into_iter()
+                                                    .filter_map(|r| r.ok())
+                                                    .collect::<Vec<_>>();
+
+                                                let licenses = set_for_licenses
                                                     .join_all()
                                                     .await
                                                     .into_iter()
@@ -106,6 +166,12 @@ where
                                                                 pool.clone(),
                                                                 &package_version,
                                                                 &platforms,
+                                                            ).await;
+
+                                                            let _ = PackageVersionMaintainer::create_all_only(
+                                                                pool.clone(),
+                                                                &package_version,
+                                                                &maintainers,
                                                             ).await;
                                                         })
                                                     },

@@ -26,22 +26,19 @@ diesel::table! {
 diesel::table! {
     licenses (id) {
         id -> Int4,
-        name -> Varchar,
-        license -> Nullable<Varchar>,
-        fullname -> Nullable<Varchar>,
-        shortname -> Nullable<Varchar>,
         url -> Nullable<Varchar>,
         created_at -> Timestamp,
+        fullname -> Varchar,
     }
 }
 
 diesel::table! {
     maintainers (id) {
         id -> Int4,
-        name -> Varchar,
         github -> Nullable<Varchar>,
         email -> Nullable<Varchar>,
         created_at -> Timestamp,
+        name -> Nullable<Varchar>,
     }
 }
 
@@ -82,9 +79,6 @@ diesel::table! {
         version -> Varchar,
         license_id -> Nullable<Int4>,
         changelog -> Nullable<Varchar>,
-        nixpkgs_source_id -> Nullable<Int4>,
-        git_source_id -> Nullable<Int4>,
-        git_host_source_id -> Nullable<Int4>,
         created_at -> Timestamp,
     }
 }
