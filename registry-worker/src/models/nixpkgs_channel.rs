@@ -1,5 +1,4 @@
 use crate::{
-    models::{NewPackageVersionSource, Source},
     schema::*,
     types::{AsyncPool, ProcessError, ProcessResult},
 };
@@ -22,6 +21,17 @@ pub struct NewNixpkgsChannel<'a> {
 }
 
 impl NixpkgsChannel {
+    pub async fn get_all(pool: AsyncPool) -> ProcessResult<Vec<Self>> {
+        let mut conn = pool.get().await?;
+        use crate::schema::nixpkgs_channels::dsl;
+
+        dsl::nixpkgs_channels
+            .select(Self::as_select())
+            .load(&mut conn)
+            .await
+            .map_err(ProcessError::DieselError)
+    }
+
     pub async fn find_by_name(pool: AsyncPool, name: &str) -> ProcessResult<Self> {
         let mut conn = pool.get().await?;
         use crate::schema::nixpkgs_channels::dsl;
