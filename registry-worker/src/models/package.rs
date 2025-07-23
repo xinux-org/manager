@@ -1,10 +1,10 @@
 use crate::{
+    libs::super_orm::{Create, Find, FindOrCreate, WithOutput},
     schema::*,
     types::{AsyncPool, ProcessError, ProcessResult},
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use futures::future::Either;
 
 #[derive(Queryable, Selectable, Identifiable, Debug, PartialEq, Clone)]
 #[diesel(table_name = packages)]
@@ -17,59 +17,60 @@ pub struct Package {
 
 #[derive(Insertable)]
 #[diesel(table_name = packages)]
-pub struct NewPackage<'a> {
-    pub name: &'a str,
-    pub description: Option<&'a str>,
-    pub homepage: Option<&'a str>,
+pub struct NewPackage {
+    pub name: String,
+    pub description: Option<String>,
+    pub homepage: Option<String>,
 }
 
-impl Package {
-    pub async fn find_or_create(
-        pool: AsyncPool,
-        name: &str,
-        description: Option<&str>,
-        homepage: Option<&str>,
-    ) -> ProcessResult<Self> {
-        Self::find_by_name(pool.clone(), name)
-            .await
-            .map_or_else(
-                |_| Either::Left(async { Self::create(pool, name, description, homepage).await }),
-                |v| Either::Right(async { Ok(v) }),
-            )
-            .await
+impl NewPackage {
+    pub fn from_values(
+        name: String,
+        description: Option<String>,
+        homepage: Option<String>,
+    ) -> Self {
+        Self {
+            name,
+            description,
+            homepage,
+        }
     }
+}
 
-    pub async fn find_by_name(pool: AsyncPool, name: &str) -> ProcessResult<Self> {
+impl WithOutput for NewPackage {
+    type Output = Package;
+
+    fn is_same(&self, other: &Self::Output) -> bool {
+        self.name.eq(&other.name)
+    }
+}
+
+impl Find for NewPackage {
+    async fn find_db(pool: AsyncPool, new: &Self) -> ProcessResult<Self::Output> {
         use crate::schema::packages::dsl;
         let mut conn = pool.get().await?;
 
         dsl::packages
-            .filter(dsl::name.eq(name))
+            .filter(dsl::name.eq(&new.name))
             .limit(1)
-            .select(Self::as_select())
+            .select(Self::Output::as_select())
             .first(&mut conn)
             .await
             .map_err(ProcessError::DieselError)
     }
+}
 
-    pub async fn create(
-        pool: AsyncPool,
-        name: &str,
-        description: Option<&str>,
-        homepage: Option<&str>,
-    ) -> ProcessResult<Self> {
+impl Create for NewPackage {
+    async fn create_db(pool: AsyncPool, new: &Self) -> ProcessResult<Self::Output> {
         let mut conn = pool.get().await?;
-        let new_row = NewPackage {
-            name,
-            description,
-            homepage,
-        };
 
         diesel::insert_into(packages::table)
-            .values(&new_row)
-            .returning(Self::as_returning())
+            .values(new)
+            .returning(Self::Output::as_returning())
             .get_result(&mut conn)
             .await
             .map_err(ProcessError::DieselError)
     }
 }
+
+impl FindOrCreate for NewPackage {}

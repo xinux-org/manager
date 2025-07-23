@@ -1,11 +1,10 @@
 use crate::{
+    libs::super_orm::{CreateAll, FindAll, FindOrCreateAll, WithOutput},
     schema::*,
     types::{AsyncPool, ProcessError, ProcessResult},
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use futures::future::Either;
-use moka::sync::Cache;
 
 #[derive(Queryable, Selectable, Identifiable, Debug, PartialEq, Clone)]
 #[diesel(table_name = platforms)]
@@ -16,63 +15,51 @@ pub struct Platform {
 
 #[derive(Insertable)]
 #[diesel(table_name = platforms)]
-pub struct NewPlatform<'a> {
-    pub name: &'a str,
+pub struct NewPlatform {
+    pub name: String,
 }
 
-impl Platform {
-    pub async fn find_by_name(pool: AsyncPool, name: &str) -> ProcessResult<Self> {
+impl NewPlatform {
+    pub fn from_values(name: String) -> Self {
+        Self { name }
+    }
+}
+
+impl WithOutput for NewPlatform {
+    type Output = Platform;
+
+    fn is_same(&self, other: &Self::Output) -> bool {
+        self.name.eq(&other.name)
+    }
+}
+
+impl FindAll for NewPlatform {
+    async fn find_all(pool: AsyncPool, new: &Vec<&Self>) -> ProcessResult<Vec<Self::Output>> {
         use crate::schema::platforms::dsl;
         let mut conn = pool.get().await?;
+        let names: Vec<_> = new.iter().map(|new| &new.name).collect();
 
         dsl::platforms
-            .filter(dsl::name.eq(name))
-            .limit(1)
-            .select(Self::as_select())
-            .first(&mut conn)
+            .filter(dsl::name.eq_any(names))
+            .select(Self::Output::as_select())
+            .load(&mut conn)
             .await
             .map_err(ProcessError::DieselError)
-    }
-
-    pub async fn create(pool: AsyncPool, name: &str) -> ProcessResult<Self> {
-        let mut conn = pool.get().await?;
-        let new_row = NewPlatform { name };
-
-        diesel::insert_into(platforms::table)
-            .values(&new_row)
-            .returning(Self::as_returning())
-            .get_result(&mut conn)
-            .await
-            .map_err(ProcessError::DieselError)
-    }
-
-    pub async fn cached_get_or_create(
-        pool: AsyncPool,
-        cache: &mut Cache<String, Self>,
-        name: &str,
-    ) -> ProcessResult<Self> {
-        cache
-            .get(name)
-            .map_or_else(
-                || {
-                    Either::Left(async {
-                        Self::find_by_name(pool.clone(), name)
-                            .await
-                            .map_or_else(
-                                |_| Either::Left(async { Self::create(pool, name).await }),
-                                |v| Either::Right(async { Ok(v) }),
-                            )
-                            .await
-                            .and_then(|platform| {
-                                cache.insert(name.to_string(), platform);
-                                cache.get(name).ok_or(ProcessError::DieselError(
-                                    diesel::result::Error::NotFound,
-                                ))
-                            })
-                    })
-                },
-                |v| Either::Right(async { Ok(v) }),
-            )
-            .await
     }
 }
+
+impl CreateAll for NewPlatform {
+    async fn create_all(pool: AsyncPool, new: &Vec<Self>) -> ProcessResult<Vec<Self::Output>> {
+        let mut conn = pool.get().await?;
+
+        diesel::insert_into(platforms::table)
+            .values(new)
+            .returning(Self::Output::as_returning())
+            .on_conflict_do_nothing()
+            .get_results(&mut conn)
+            .await
+            .map_err(ProcessError::DieselError)
+    }
+}
+
+impl FindOrCreateAll for NewPlatform {}

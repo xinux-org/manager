@@ -1,4 +1,5 @@
 use crate::{
+    libs::super_orm::{CreateAll, WithOutput},
     models::{package_version::PackageVersion, platform::Platform},
     schema::*,
     types::{AsyncPool, ProcessError, ProcessResult},
@@ -23,26 +24,31 @@ pub struct NewPackageVersionPlatform {
     pub platform_id: i32,
 }
 
-impl PackageVersionPlatform {
-    pub async fn create_all_only(
-        pool: AsyncPool,
-        package_version: &PackageVersion,
-        platforms: &[Platform],
-    ) -> ProcessResult<()> {
+impl NewPackageVersionPlatform {
+    pub fn from_values(package_version_id: i32, platform_id: i32) -> Self {
+        Self {
+            package_version_id,
+            platform_id,
+        }
+    }
+}
+
+impl WithOutput for NewPackageVersionPlatform {
+    type Output = ();
+
+    fn is_same(&self, _: &Self::Output) -> bool {
+        false
+    }
+}
+
+impl CreateAll for NewPackageVersionPlatform {
+    async fn create_all(pool: AsyncPool, new: &Vec<Self>) -> ProcessResult<Vec<Self::Output>> {
         let mut conn = pool.get().await?;
         diesel::insert_into(package_versions_platforms::table)
-            .values(
-                platforms
-                    .iter()
-                    .map(|platform| NewPackageVersionPlatform {
-                        platform_id: platform.id,
-                        package_version_id: package_version.id,
-                    })
-                    .collect::<Vec<_>>(),
-            )
+            .values(new)
             .execute(&mut conn)
             .await
-            .map(|_| ())
+            .map(|_| vec![])
             .map_err(ProcessError::DieselError)
     }
 }
