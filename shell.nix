@@ -20,8 +20,6 @@ pkgs.mkShell {
   buildInputs = (
     with pkgs;
     [
-      flutter
-      android-tools
       pandoc
       diesel-cli
 
@@ -53,7 +51,6 @@ pkgs.mkShell {
   );
 
   LINK_MANPAGES_PANDOC_FILTER = import ./flake-info/src/data/link-manpages.nix { inherit pkgs; };
-  FLUTTER_ROOT = "${pkgs.flutter}";
 
   LC_CTYPE = "en_US.UTF-8";
   LC_ALL = "en_US.UTF-8";
