@@ -1,25 +1,22 @@
-flake:
-{
+flake: {
   config,
   lib,
   pkgs,
   ...
-}:
-let
+}: let
   cfg = config.services.xinux-manager.registry-worker;
   system = pkgs.stdenv.hostPlatform.system;
   pkg = flake.packages.${system}.default;
-  localDatabase = ((cfg.database.host == "127.0.0.1") || (cfg.database.host == "localhost"));
+  localDatabase = (cfg.database.host == "127.0.0.1") || (cfg.database.host == "localhost");
 
-  config1 =
-    with lib;
+  config1 = with lib;
     mkIf cfg.enable {
       users = {
         users.${cfg.user} = {
           isSystemUser = true;
           group = cfg.group;
         };
-        groups.${cfg.group} = { };
+        groups.${cfg.group} = {};
       };
 
       services.postgresql = {
@@ -30,7 +27,7 @@ let
             ensureDBOwnership = true;
           }
         ];
-        ensureDatabases = [ cfg.database.name ];
+        ensureDatabases = [cfg.database.name];
 
         # https://www.postgresql.org/docs/current/auth-username-maps.html
         identMap = ''
@@ -49,22 +46,21 @@ let
         description = ''
           xinux manager registry-worker is responsible for fetching and storing data about packages, options and flakes from various places, especially from nixos/nixpkgs
         '';
-        documentation = [ "https://github.com/xinux-org/manager" ];
+        documentation = ["https://github.com/xinux-org/manager"];
 
-        after = [ "network-online.target" ] ++ lib.optional localDatabase "postgresql.service";
+        after = ["network-online.target"] ++ lib.optional localDatabase "postgresql.service";
         requires = lib.optional localDatabase "postgresql.service";
-        wants = [ "network-online.target" ];
-        wantedBy = [ "multi-user.target" ];
+        wants = ["network-online.target"];
+        wantedBy = ["multi-user.target"];
 
-        path =
-          with pkgs;
+        path = with pkgs;
           [
             coreutils
             replace-secret
             diesel-cli
             diesel-cli-ext
           ]
-          ++ [ cfg.package ];
+          ++ [cfg.package];
 
         serviceConfig = {
           User = cfg.user;
@@ -92,8 +88,7 @@ let
         };
       };
     };
-in
-{
+in {
   options = with lib; {
     services.xinux-manager.registry-worker = {
       enable = mkEnableOption ''
@@ -129,13 +124,19 @@ in
 
         socketAuth = mkOption {
           type = types.bool;
-          default = if localDatabase then true else false;
+          default =
+            if localDatabase
+            then true
+            else false;
           description = "Use Unix socket authentication for PostgreSQL instead of password authentication when local database wanted.";
         };
 
         socket = mkOption {
           type = types.nullOr types.path;
-          default = if localDatabase then "/run/postgresql" else null;
+          default =
+            if localDatabase
+            then "/run/postgresql"
+            else null;
           description = "Path to the PostgreSQL Unix socket.";
         };
 
@@ -171,5 +172,5 @@ in
     };
   };
 
-  config = lib.mkMerge [ config1 ];
+  config = lib.mkMerge [config1];
 }

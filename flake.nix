@@ -8,22 +8,20 @@
     };
   };
 
-  outputs =
-    {
-      nixpkgs,
-      flake-utils,
-      registry-worker,
-      ...
-    }:
+  outputs = {
+    nixpkgs,
+    flake-utils,
+    registry-worker,
+    ...
+  }:
     flake-utils.lib.eachDefaultSystem (
-      system:
-      let
+      system: let
         pkgs = import nixpkgs {
           inherit system;
         };
-      in
-      {
+      in {
         devShells.default = pkgs.callPackage ./shell.nix pkgs;
+        formatter = pkgs.alejandra;
         packages = {
           registry-worker = registry-worker.defaultPackage.${system};
         };
