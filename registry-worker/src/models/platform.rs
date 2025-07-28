@@ -66,8 +66,6 @@ impl FindOrCreateAll for NewPlatform {}
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-
     use crate::libs::{
         diesel_test_mock::diesel_test_pool,
         super_orm::{CreateAll, FindAll, FindOrCreateAll},
