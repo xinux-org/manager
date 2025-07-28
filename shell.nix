@@ -1,8 +1,7 @@
 pkgs:
 pkgs.mkShell {
   nativeBuildInputs = (
-    with pkgs;
-    [
+    with pkgs; [
       pkg-config
       openssl
 
@@ -18,15 +17,12 @@ pkgs.mkShell {
   );
 
   buildInputs = (
-    with pkgs;
-    [
+    with pkgs; [
       nixd
       statix
       deadnix
       alejandra
 
-      flutter
-      android-tools
       pandoc
       diesel-cli
 
@@ -44,16 +40,15 @@ pkgs.mkShell {
 
   LD_LIBRARY_PATH = (
     with pkgs;
-    lib.makeLibraryPath [
-      openssl
-      libgit2
-      sqlite
-      protobuf
-    ]
+      lib.makeLibraryPath [
+        openssl
+        libgit2
+        sqlite
+        protobuf
+      ]
   );
 
-  LINK_MANPAGES_PANDOC_FILTER = import ./flake-info/src/data/link-manpages.nix { inherit pkgs; };
-  FLUTTER_ROOT = "${pkgs.flutter}";
+  LINK_MANPAGES_PANDOC_FILTER = import ./flake-info/src/data/link-manpages.nix {inherit pkgs;};
 
   LC_CTYPE = "en_US.UTF-8";
   LC_ALL = "en_US.UTF-8";
