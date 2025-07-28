@@ -6,7 +6,7 @@ use crate::{
     types::AsyncPool,
 };
 
-pub async fn nixpkgs_source(pool: AsyncPool, channel: (), source: NixpkgsSource) {
+pub async fn nixpkgs_source(pool: AsyncPool, _: (), source: NixpkgsSource) {
     if source.is_processed() {
         return;
     }

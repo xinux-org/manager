@@ -1,4 +1,4 @@
-use chrono::{DateTime, Days, Months, Utc};
+use chrono::{DateTime, Days, Utc};
 use futures_util::StreamExt;
 use itertools::Itertools;
 use std::sync::Arc;
@@ -12,7 +12,7 @@ use crate::{
 };
 
 pub async fn process_nixpkgs_commits(pool: AsyncPool, oc: Arc<Octocrab>) -> ProcessResult<()> {
-    let commits = fetch_branch_commits_from_github(pool, oc)
+    let _ = fetch_branch_commits_from_github(pool, oc)
         .await?
         .into_iter()
         .flatten()

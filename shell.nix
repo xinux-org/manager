@@ -20,6 +20,11 @@ pkgs.mkShell {
   buildInputs = (
     with pkgs;
     [
+      nixd
+      statix
+      deadnix
+      alejandra
+
       flutter
       android-tools
       pandoc
@@ -31,11 +36,6 @@ pkgs.mkShell {
       rustfmt
       clippy
       cargo-watch
-
-      nixd
-      statix
-      deadnix
-      nixfmt-rfc-style
     ]
   );
 

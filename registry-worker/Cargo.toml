@@ -10,10 +10,17 @@ dotenvy = "0.15.7"
 tokio = { version = "1.45.1", features = ["full"] }
 moka = { version = "0.12.10", features = ["sync"] }
 bb8 = "0.9.0"
-diesel-async = { version = "0.6.1", features = ["bb8", "postgres"] }
+diesel-async = { version = "0.6.1", features = [
+  "bb8",
+  "postgres",
+  "async-connection-wrapper",
+  "sync-connection-wrapper",
+] }
 octocrab = { version = "0.44.1", features = ["stream"] }
 chrono = { version = "0.4.41", features = ["serde"] }
 log = "0.4.27"
 futures-util = "0.3.31"
 futures = "0.3.31"
 itertools = "0.14.0"
+url = "2.5.4"
+diesel_migrations = { version = "2.2.0", features = ["postgres"] }

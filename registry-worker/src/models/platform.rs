@@ -13,7 +13,7 @@ pub struct Platform {
     pub name: String,
 }
 
-#[derive(Insertable)]
+#[derive(Insertable, Debug, Clone)]
 #[diesel(table_name = platforms)]
 pub struct NewPlatform {
     pub name: String,
@@ -63,3 +63,89 @@ impl CreateAll for NewPlatform {
 }
 
 impl FindOrCreateAll for NewPlatform {}
+
+#[cfg(test)]
+mod tests {
+    use itertools::Itertools;
+
+    use crate::libs::{
+        diesel_test_mock::diesel_test_pool,
+        super_orm::{CreateAll, FindAll, FindOrCreateAll},
+    };
+
+    use super::NewPlatform;
+
+    #[tokio::test]
+    async fn it_works() {
+        let pool = diesel_test_pool().await;
+
+        let new_x86_64_linux = NewPlatform::from_values("x86_64-linux".to_string());
+
+        assert_eq!(
+            NewPlatform::find_all(pool.clone(), &vec![&new_x86_64_linux])
+                .await
+                .expect("Should retrieve data form database")
+                .len(),
+            0,
+            "initially, there is no platforms"
+        );
+
+        let result = NewPlatform::find_or_create_all(pool.clone(), vec![new_x86_64_linux.clone()])
+            .await
+            .expect("Should be able to create platform");
+
+        assert_eq!(result.len(), 1, "should create one, because it is empty");
+
+        let result = NewPlatform::find_all(pool.clone(), &vec![&new_x86_64_linux])
+            .await
+            .expect("Should retrieve data form database");
+
+        assert_eq!(
+            result.len(),
+            1,
+            "now we created a platform and there should be one"
+        );
+
+        let new_aarch64_linux = NewPlatform::from_values("aarch64-linux".to_string());
+
+        let result = NewPlatform::find_all(pool.clone(), &vec![&new_aarch64_linux])
+            .await
+            .expect("Should be able to create platform");
+
+        assert_eq!(
+            result.len(),
+            0,
+            "aarch64-linux is not inserted yet, therefore this should be empty"
+        );
+
+        let result = NewPlatform::find_or_create_all(
+            pool.clone(),
+            vec![new_x86_64_linux.clone(), new_aarch64_linux.clone()],
+        )
+        .await
+        .expect("Should be able to create platform");
+
+        assert_eq!(
+            result.len(),
+            2,
+            "this should create aarch64-linux, and get x86_64-linux"
+        );
+
+        let first = result.iter().find(|p| p.name == new_x86_64_linux.name);
+        assert!(first.is_some(), "there should be x86_64-linux");
+
+        let first = first.unwrap();
+        assert_eq!(first.id, 1, "should find x86_64-linux's id");
+
+        let result =
+            NewPlatform::create_all(pool.clone(), &vec![new_x86_64_linux, new_aarch64_linux])
+                .await
+                .expect("Should be able to create");
+
+        assert_eq!(
+            result.len(),
+            0,
+            "should should not create nothing, because there is already created ones"
+        );
+    }
+}

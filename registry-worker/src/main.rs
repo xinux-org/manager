@@ -65,48 +65,48 @@ async fn main() {
         });
     }
 
-    // {
-    //     let pool = pool.clone();
-    //     let oc = oc.clone();
-    //     set.spawn(async move {
-    //         loop {
-    //             log::info!("nixpkgs-branches: updating");
-    //
-    //             match process_nixpkgs_branches(pool.clone(), oc.clone()).await {
-    //                 Ok(_) => {
-    //                     log::info!("nixpkgs-branches: all branches updated");
-    //                 }
-    //                 Err(err) => {
-    //                     log::error!("nixpkgs-branches: {:?}", err);
-    //                 }
-    //             };
-    //
-    //             // once a day
-    //             tokio::time::sleep(Duration::from_secs(60 * 60 * 24)).await;
-    //         }
-    //     });
-    // }
-    //
-    // {
-    //     let pool = pool.clone();
-    //     let oc = oc.clone();
-    //     set.spawn(async move {
-    //         loop {
-    //             log::info!("nixpkgs-commits: updating");
-    //             match process_nixpkgs_commits(pool.clone(), oc.clone()).await {
-    //                 Ok(_) => {
-    //                     log::info!("nixpkgs-commits: all branch commits updated");
-    //                 }
-    //                 Err(err) => {
-    //                     log::error!("nixpkgs-commits: {:?}", err);
-    //                 }
-    //             };
-    //
-    //             // once in an hour
-    //             tokio::time::sleep(Duration::from_secs(60 * 60)).await;
-    //         }
-    //     });
-    // }
+    {
+        let pool = pool.clone();
+        let oc = oc.clone();
+        set.spawn(async move {
+            loop {
+                log::info!("nixpkgs-branches: updating");
+
+                match process_nixpkgs_branches(pool.clone(), oc.clone()).await {
+                    Ok(_) => {
+                        log::info!("nixpkgs-branches: all branches updated");
+                    }
+                    Err(err) => {
+                        log::error!("nixpkgs-branches: {:?}", err);
+                    }
+                };
+
+                // once a day
+                tokio::time::sleep(Duration::from_secs(60 * 60 * 24)).await;
+            }
+        });
+    }
+
+    {
+        let pool = pool.clone();
+        let oc = oc.clone();
+        set.spawn(async move {
+            loop {
+                log::info!("nixpkgs-commits: updating");
+                match process_nixpkgs_commits(pool.clone(), oc.clone()).await {
+                    Ok(_) => {
+                        log::info!("nixpkgs-commits: all branch commits updated");
+                    }
+                    Err(err) => {
+                        log::error!("nixpkgs-commits: {:?}", err);
+                    }
+                };
+
+                // once in an hour
+                tokio::time::sleep(Duration::from_secs(60 * 60)).await;
+            }
+        });
+    }
 
     set.join_all().await;
 }

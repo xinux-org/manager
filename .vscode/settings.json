@@ -1,5 +1,6 @@
 {
     "rust-analyzer.linkedProjects": [
-        "registry-worker/Cargo.toml"
+        "Cargo.toml"
+        // "registry-worker/Cargo.toml"
     ]
 }

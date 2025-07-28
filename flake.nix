@@ -24,6 +24,7 @@
       in
       {
         devShells.default = pkgs.callPackage ./shell.nix pkgs;
+        formatter = pkgs.alejandra;
         packages = {
           registry-worker = registry-worker.defaultPackage.${system};
         };
