@@ -1,13 +1,10 @@
-use futures::future::Either;
 use tokio::task::JoinSet;
 
 use crate::{
-    libs::super_orm::{CreateAll, FindOrCreate, FindOrCreateAll},
-    models::{
-        Maintainer, NewPackage, NewPackageVersionPlatform, NewPlatform, PackageVersion,
-        PackageVersionMaintainer, PackageVersionSource, Source,
+    libs::super_orm::{CreateAll, FindOrCreate, FindOrCreateAll}, models::{
+        NewLicense, NewMaintainer, NewPackage, NewPackageVersionMaintainer, NewPackageVersionPlatform, NewPlatform, PackageVersion, PackageVersionSource, Source
     },
-    types::{AsyncPool, ProcessError, ProcessResult},
+    types::{AsyncPool, ProcessError, ProcessResult}
 };
 
 pub async fn process_exports<S>(
@@ -28,7 +25,7 @@ where
             match export.item {
                 flake_info::data::Derivation::Package {
                     package_pname,
-                    // package_license,
+                    package_license,
                     package_pversion,
                     package_platforms,
                     package_maintainers,
@@ -65,76 +62,54 @@ where
                         })
                         .collect();
 
+                    let maintainers_vec = package_maintainers
+                        .into_iter()
+                        .map(|maintainer| 
+                            NewMaintainer::from_values(
+                                maintainer.name,
+                                maintainer.github,
+                                maintainer.email
+                            ))
+                        .collect();
+
+                    let maintainers =
+                        NewMaintainer::find_or_create_all(pool.clone(), maintainers_vec).await?;
+
+                    let package_version_maintainers_vec = maintainers
+                        .into_iter()
+                        .map(|maintainer| {
+                            NewPackageVersionMaintainer::from_values(package_version.id, maintainer.id)
+                        })
+                        .collect();
+
+                    let licenses_vec = package_license
+                        .into_iter()
+                       .map(|license| 
+                            NewLicense::from_values(
+                                license.fullName,
+                                license.url
+                            ))
+                        .collect();
+                    
+                    let _ =
+                        NewLicense::find_or_create_all(pool.clone(), licenses_vec).await?;
+
+
                     let _ = NewPackageVersionPlatform::create_all(
                         pool.clone(),
                         &package_version_platforms_vec,
                     )
                     .await?;
 
-                    // let mut set_for_licenses = JoinSet::new();
-                    // package_license.into_iter().for_each(|license| {
-                    //     let pool = pool.clone();
-                    //     println!("Inside the License");
-                    //
-                    //     set_for_licenses.spawn(async move {
-                    //         License::find_by_name(pool.clone(), license.clone())
-                    //             .await
-                    //             .map_or_else(
-                    //                 |_| {
-                    //                     Either::Left(async { License::create(pool, license).await })
-                    //                 },
-                    //                 |v| Either::Right(async { Ok(v) }),
-                    //             )
-                    //             .await
-                    //     });
-                    // });
-
-                    let mut set_for_maintainers = JoinSet::new();
-                    package_maintainers.into_iter().for_each(|maintainer| {
-                        let pool = pool.clone();
-                        println!("Insite the Maintainer");
-                        set_for_maintainers.spawn(async move {
-                            Maintainer::find_by_maintainer(
-                                pool.clone(),
-                                maintainer.clone(), // added clone
-                            )
-                            .await
-                            .map_or_else(
-                                |_| {
-                                    Either::Left(async {
-                                        Maintainer::create(pool.clone(), maintainer).await
-                                    })
-                                },
-                                |v| Either::Right(async { Ok(v) }),
-                            )
-                            .await
-                        });
-                    });
-
-                    let maintainers = set_for_maintainers
-                        .join_all()
-                        .await
-                        .into_iter()
-                        .filter_map(|r| r.ok())
-                        .collect::<Vec<_>>();
-
-                    // let licenses = set_for_licenses
-                    //     .join_all()
-                    //     .await
-                    //     .into_iter()
-                    //     .filter_map(|r| r.ok())
-                    //     .collect::<Vec<_>>();
+                    let _ = NewPackageVersionMaintainer::create_all(
+                        pool.clone(),
+                        &package_version_maintainers_vec,
+                    )
+                    .await?;
 
                     let source = source.clone();
                     let _ =
                         PackageVersionSource::create(pool.clone(), &package_version, source).await;
-
-                    PackageVersionMaintainer::create_all_only(
-                        pool.clone(),
-                        &package_version,
-                        &maintainers,
-                    )
-                    .await?;
 
                     Ok(())
                 }

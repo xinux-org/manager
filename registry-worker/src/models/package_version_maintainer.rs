@@ -1,7 +1,5 @@
 use crate::{
-    models::{maintainer::Maintainer, package_version::PackageVersion},
-    schema::*,
-    types::{AsyncPool, ProcessError, ProcessResult},
+    libs::super_orm::{CreateAll, WithOutput}, models::{maintainer::Maintainer, package_version::PackageVersion}, schema::*, types::{AsyncPool, ProcessError, ProcessResult}
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
@@ -23,26 +21,28 @@ pub struct NewPackageVersionMaintainer {
     pub maintainer_id: i32,
 }
 
-impl PackageVersionMaintainer {
-    pub async fn create_all_only(
-        pool: AsyncPool,
-        package_version: &PackageVersion,
-        maintainers: &[Maintainer],
-    ) -> ProcessResult<()> {
+impl NewPackageVersionMaintainer {
+    pub fn from_values(package_version_id: i32, maintainer_id: i32) -> Self {
+        Self { package_version_id, maintainer_id }
+    }
+}
+
+impl WithOutput for NewPackageVersionMaintainer {
+    type Output = ();
+
+    fn is_same(&self, _: &Self::Output) -> bool {
+        false
+    }
+}
+
+impl CreateAll for NewPackageVersionMaintainer {
+    async fn create_all(pool: AsyncPool, new: &Vec<Self>) -> ProcessResult<Vec<Self::Output>> {
         let mut conn = pool.get().await?;
         diesel::insert_into(package_versions_maintainers::table)
-            .values(
-                maintainers
-                    .iter()
-                    .map(|maintainer| NewPackageVersionMaintainer {
-                        maintainer_id: maintainer.id,
-                        package_version_id: package_version.id,
-                    })
-                    .collect::<Vec<_>>(),
-            )
+            .values(new)
             .execute(&mut conn)
             .await
-            .map(|_| ())
+            .map(|_| vec![])
             .map_err(ProcessError::DieselError)
     }
 }

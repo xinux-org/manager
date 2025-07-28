@@ -1,10 +1,10 @@
 use crate::{
+    libs::super_orm::{CreateAll, FindAll, FindOrCreateAll, WithOutput},
     schema::*,
-    types::{AsyncPool, ProcessError, ProcessResult},
+    types::{AsyncPool, ProcessError, ProcessResult}
 };
-use diesel::{prelude::*, result::Error};
+use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use flake_info::data::export::{Maintainer as FlakeMaintainer};
 
 #[derive(Queryable, Selectable, Identifiable, Debug, PartialEq)]
 #[diesel(table_name = maintainers)]
@@ -17,65 +17,58 @@ pub struct Maintainer {
 
 #[derive(Insertable)]
 #[diesel(table_name = maintainers)]
-pub struct NewMaintainer<'a> {
-    pub name: Option<&'a str>,
-    pub github: Option<&'a str>,
-    pub email: Option<&'a str>,
+pub struct NewMaintainer {
+    pub name: Option<String>,
+    pub github: Option<String>,
+    pub email: Option<String>,
 }
 
-impl Maintainer {
-    pub async fn find_by_maintainer(
-        pool: AsyncPool,
-        maintainer: FlakeMaintainer
-    ) -> ProcessResult<Self> {
+impl NewMaintainer {
+    pub fn from_values(name: Option<String>, github: Option<String>, email: Option<String>) -> Self {
+        Self { name, github, email }
+    }
+}
+
+impl WithOutput for NewMaintainer {
+    type Output = Maintainer;
+    fn is_same(&self, other: &Self::Output) -> bool {
+        self.name.eq(&other.name) &&
+        self.github.eq(&other.github) &&
+        self.email.eq(&other.email)
+    }
+}
+
+impl FindAll for NewMaintainer {
+    async fn find_all(pool: AsyncPool, new: &Vec<&Self>) -> ProcessResult<Vec<Self::Output>> {
         use crate::schema::maintainers::dsl;
         let mut conn = pool.get().await?;
+        let names: Vec<_> = new.iter().filter_map(|new| new.name.as_deref()).collect();
+        let githubs: Vec<_> = new.iter().filter_map(|new| new.github.as_deref()).collect();
+        let emails: Vec<_> = new.iter().filter_map(|new| new.email.as_deref()).collect();
 
-        if let Some(email) = &maintainer.email {
-            return dsl::maintainers
-                .filter(dsl::email.eq(email))
-                .limit(1)
-                .select(Self::as_select())
-                .first(&mut conn)
-                .await
-                .map_err(ProcessError::DieselError);
-        } else if let Some(github) = &maintainer.github {
-            return dsl::maintainers
-                .filter(dsl::github.eq(github))
-                .limit(1)
-                .select(Self::as_select())
-                .first(&mut conn)
-                .await
-                .map_err(ProcessError::DieselError);
-        } else if let Some(name) = &maintainer.name {
-            return dsl::maintainers
-                .filter(dsl::name.eq(name))
-                .limit(1)
-                .select(Self::as_select())
-                .first(&mut conn)
-                .await
-                .map_err(ProcessError::DieselError);
-        } else {
-            Err(ProcessError::DieselError(Error::NotFound))
-        }
-    }
-
-    pub async fn create(
-        pool: AsyncPool,
-        maintainer: FlakeMaintainer
-    ) -> ProcessResult<Self> {
-        let mut conn = pool.get().await?;
-        let new_row = NewMaintainer {
-            name: maintainer.name.as_deref(),
-            github: maintainer.github.as_deref(),
-            email: maintainer.email.as_deref(),
-        };
-
-        diesel::insert_into(maintainers::table)
-            .values(&new_row)
-            .returning(Self::as_returning())
-            .get_result(&mut conn)
+        dsl::maintainers
+            .filter(dsl::name.eq_any(names))
+            .or_filter(dsl::email.eq_any(emails))
+            .or_filter(dsl::github.eq_any(githubs))
+            .select(Self::Output::as_select())
+            .load(&mut conn)
             .await
             .map_err(ProcessError::DieselError)
     }
 }
+
+impl CreateAll for NewMaintainer {
+    async fn create_all(pool: AsyncPool, new: &Vec<Self>) -> ProcessResult<Vec<Self::Output>> {
+        let mut conn = pool.get().await?;
+
+        diesel::insert_into(maintainers::table)
+            .values(new)
+            .returning(Self::Output::as_returning())
+            .on_conflict_do_nothing()
+            .get_results(&mut conn)
+            .await
+            .map_err(ProcessError::DieselError)
+    }
+}
+
+impl FindOrCreateAll for NewMaintainer {}
